@@ -27,8 +27,16 @@ class AppColors {
   static const Color borderFocused = Colors.indigoAccent;
 
   // ── Social & Semantic ─────────────────────────────────────────────────────
-  static final Color googleButton = Colors.yellow[700] ?? const Color(0xFFFBC02D);
+  static const Color googleButton = Color(0xFFFBC02D);
   static const Color danger = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
   static const Color success = Color(0xFF10B981);
+
+  // ── New Home Screen Colors ──────────────────────────────────────────────────
+  static const Color offWhite = Color(0xFFF8F9FA);
+  static const Color darkCharcoal = Color(0xFF1A1A1A);
+  static const Color electricBlue = Color(0xFF2373F4);
+  static const Color vibrantPurple = Color(0xFF9564DD);
+  static const Color punchPink = Color(0xFFFF0052);
+  static const Color electricYellow = Color(0xFFFFD400);
 }
