@@ -1,55 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/login_screen.dart';
+import 'utils/theme.dart';
+import 'utils/routes.dart';
 
-Future<void> main() async {
-  // Wakes up the native Android side before initializing Supabase
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Your actual Supabase URL and Anon Key
-  const supabaseUrl = 'https://sbfchxjiybmaddvrkhws.supabase.co';
-  const supabaseAnonKey = 'sb_publishable_zmCVKeTr_em3CGKaJsPvUA_9qYDWdwn';
+  // 1. Load environment variables from .env
+  await dotenv.load(fileName: '.env');
 
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  // 2. Initialize Supabase with secrets from .env
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
 
-  runApp(const MyApp());
+  runApp(const App());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class App extends StatelessWidget {
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Journey Traveler',
-      debugShowCheckedModeBanner: false, // Removes the debug banner on the top right
-      initialRoute: '/login',
-      getPages: [
-        GetPage(name: '/login', page: () => LoginScreen()),
-        GetPage(name: '/home', page: () => const HomeScreen()),
-      ],
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Journey'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Text(
-          'Map View Placeholder',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-      ),
+    return MaterialApp.router(
+      title: 'Journey',
+      debugShowCheckedModeBanner: false,
+      // ── Design System Theme ─────────────────────────────────────
+      theme: AppTheme.darkTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.dark,
+      // ── Router ──────────────────────────────────────────────────
+      routerConfig: appRouter,
     );
   }
 }
