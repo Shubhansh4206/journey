@@ -4,8 +4,11 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../common_widgets/widgets.dart';
 import '../../controllers/login_controller.dart';
+import '../../services/profile_service.dart';
 import '../../utils/colors.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -193,7 +196,12 @@ class LoginScreen extends StatelessWidget {
                           onSubmitted: (_) async {
                             final success = await controller.login();
                             if (success && context.mounted) {
-                              context.go('/home');
+                              final user = Supabase.instance.client.auth.currentUser;
+                              final hasProfile = user != null &&
+                                  await ProfileService().hasCompletedProfile(user.id);
+                              if (context.mounted) {
+                                context.go(hasProfile ? '/home' : '/onboarding');
+                              }
                             }
                           },
                         ),
@@ -236,7 +244,12 @@ class LoginScreen extends StatelessWidget {
                               : () async {
                                   final success = await controller.login();
                                   if (success && context.mounted) {
-                                    context.go('/home');
+                                    final user = Supabase.instance.client.auth.currentUser;
+                                    final hasProfile = user != null &&
+                                        await ProfileService().hasCompletedProfile(user.id);
+                                    if (context.mounted) {
+                                      context.go(hasProfile ? '/home' : '/onboarding');
+                                    }
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
@@ -323,7 +336,12 @@ class LoginScreen extends StatelessWidget {
                     onPressed: () async {
                       final success = await controller.signInWithGoogle();
                       if (success && context.mounted) {
-                        context.go('/home');
+                        final user = Supabase.instance.client.auth.currentUser;
+                        final hasProfile = user != null &&
+                            await ProfileService().hasCompletedProfile(user.id);
+                        if (context.mounted) {
+                          context.go(hasProfile ? '/home' : '/onboarding');
+                        }
                       }
                     },
                     icon: const FaIcon(

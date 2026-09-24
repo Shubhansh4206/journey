@@ -2,23 +2,29 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
+import '../screens/onboarding/profile_onboarding_screen.dart';
 import '../screens/home_screen.dart';
+import '../services/profile_service.dart';
 
 /// ── App Router ──────────────────────────────────────────────────────────────
-/// Uses GoRouter for declarative, path-based navigation.
-/// The initial route is determined by whether the user is already signed in.
 final GoRouter appRouter = GoRouter(
   initialLocation: '/login',
-  redirect: (context, state) {
+  redirect: (context, state) async {
     final session = Supabase.instance.client.auth.currentSession;
     final isOnAuth = state.matchedLocation == '/login' ||
         state.matchedLocation == '/register';
 
-    // Already logged in → send to home
-    if (session != null && isOnAuth) return '/home';
+    // 1. Not logged in -> send to login
+    if (session == null && !isOnAuth) {
+      return '/login';
+    }
 
-    // Not logged in and trying to access protected routes → send to login
-    if (session == null && !isOnAuth) return '/login';
+    // 2. Already logged in and trying to access auth pages -> check profile
+    if (session != null && isOnAuth) {
+      final hasProfile =
+          await ProfileService().hasCompletedProfile(session.user.id);
+      return hasProfile ? '/home' : '/onboarding';
+    }
 
     return null; // no redirect
   },
@@ -30,6 +36,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/register',
       builder: (context, state) => RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => ProfileOnboardingScreen(),
     ),
     GoRoute(
       path: '/home',

@@ -282,7 +282,7 @@ class RegisterScreen extends StatelessWidget {
                                   final result = await controller.register();
                                   if (result == RegisterResult.sessionCreated &&
                                       context.mounted) {
-                                    context.go('/home');
+                                    context.go('/onboarding');
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
@@ -369,7 +369,7 @@ class RegisterScreen extends StatelessWidget {
                     onPressed: () async {
                       final success = await controller.signInWithGoogle();
                       if (success && context.mounted) {
-                        context.go('/home');
+                        context.go('/onboarding');
                       }
                     },
                     icon: const FaIcon(
