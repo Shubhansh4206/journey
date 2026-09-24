@@ -28,9 +28,8 @@ class App extends StatelessWidget {
       title: 'Journey',
       debugShowCheckedModeBanner: false,
       // ── Design System Theme ─────────────────────────────────────
-      theme: AppTheme.darkTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      theme: AppTheme.lightTheme,
+      themeMode: ThemeMode.light,
       // ── Router ──────────────────────────────────────────────────
       routerConfig: appRouter,
     );

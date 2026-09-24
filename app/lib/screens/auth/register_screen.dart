@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../common_widgets/widgets.dart';
 import '../../controllers/register_controller.dart';
 import '../../utils/colors.dart';
-import '../../utils/theme.dart';
 
 class RegisterScreen extends StatelessWidget {
   RegisterScreen({super.key});
@@ -13,208 +15,383 @@ class RegisterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
+          onPressed: () => context.go('/login'),
+        ),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height -
-                  MediaQuery.of(context).padding.top -
-                  MediaQuery.of(context).padding.bottom -
-                  48,
-            ),
-            child: IntrinsicHeight(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Spacer(flex: 1),
-
-                  // ── Logo ──────────────────────────────────────
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryMuted,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.3)),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.route_rounded,
-                        size: 28,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  Text('Journey', style: tt.displaySmall),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your path starts here.\nCreate an account to get started.',
-                    style: tt.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-
-                  const Spacer(flex: 2),
-
-                  // ── Email ─────────────────────────────────────
-                  Text('Email Address',
-                      style: tt.titleSmall
-                          ?.copyWith(color: AppColors.textSecondary)),
-                  const SizedBox(height: 10),
-                  _InputField(
-                    controller: controller.emailController,
-                    hint: 'you@example.com',
-                    keyboardType: TextInputType.emailAddress,
-                    autofocus: true,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Password ──────────────────────────────────
-                  Text('Password',
-                      style: tt.titleSmall
-                          ?.copyWith(color: AppColors.textSecondary)),
-                  const SizedBox(height: 10),
-                  _InputField(
-                    controller: controller.passwordController,
-                    hint: 'Minimum 6 characters',
-                    obscureText: true,
-                    onSubmitted: (_) async {
-                      if (await controller.register() && context.mounted) {
-                        context.go('/home');
-                      }
-                    },
-                  ),
-
-                  // ── Error Message ─────────────────────────────
-                  Obx(() {
-                    if (controller.errorMessage.value != null) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          controller.errorMessage.value!,
-                          style: const TextStyle(
-                              color: AppColors.danger, fontSize: 13),
+                  // ── Register heading and welcome message ─────────────────────
+                  SizedBox(
+                    width: size.width * 0.85,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Create Account',
+                          style: GoogleFonts.poppins(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigoAccent,
+                          ),
                         ),
-                      );
+                        const SizedBox(height: 14),
+                        Text(
+                          'Create an account so you can explore all the existing features',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  // ── Rate Limit Notice Banner (Special Supabase Free-Tier Alert) ──
+                  Obx(() {
+                    if (!controller.rateLimitNotice.value) {
+                      return const SizedBox.shrink();
                     }
-                    return const SizedBox.shrink();
+
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Color(0xFFB45309),
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Supabase Email Rate Limit',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF92400E),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Supabase's default mailer is capped at ~3 confirmation emails/hour on free tier projects.\n\nQuick Fix in Supabase Dashboard:\n• Go to Authentication > Providers > Email\n• Turn OFF 'Confirm email'\n\nThis lets users register and sign in instantly without hitting email limits.",
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.5,
+                              color: const Color(0xFF78350F),
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   }),
 
-                  const SizedBox(height: 32),
+                  // ── Email Confirmation Sent Banner ───────────────────────────
+                  Obx(() {
+                    if (!controller.emailConfirmationNotice.value) {
+                      return const SizedBox.shrink();
+                    }
 
-                  // ── Submit Button ─────────────────────────────
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFA7F3D0), width: 1.5),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.mark_email_read_outlined,
+                                color: Color(0xFF047857),
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Verification Email Sent!',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF065F46),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Please check your inbox (and spam folder) for the verification link. Once verified, you can sign in.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: const Color(0xFF065F46),
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: () => context.go('/login'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF047857),
+                                side: const BorderSide(color: Color(0xFF047857)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Text(
+                                'Go to Login',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+
+                  // ── General Error Alert ──────────────────────────────────────
+                  Obx(() {
+                    final err = controller.errorMessage.value;
+                    if (err == null || controller.rateLimitNotice.value) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: AppColors.danger, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              err,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: const Color(0xFF991B1B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+
+                  // ── Form Fields ──────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CustomTextField(
+                          label: 'Full Name',
+                          controller: controller.nameController,
+                          prefixIcon: Icons.person_outline_rounded,
+                          hintText: 'John Doe',
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 18),
+                        CustomTextField(
+                          label: 'Email',
+                          controller: controller.emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          prefixIcon: Icons.email_outlined,
+                          hintText: 'Enter your email',
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 18),
+                        CustomTextField(
+                          label: 'Password',
+                          controller: controller.passwordController,
+                          obscureText: true,
+                          prefixIcon: Icons.lock_outline_rounded,
+                          hintText: 'Minimum 6 characters',
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 18),
+                        CustomTextField(
+                          label: 'Confirm Password',
+                          controller: controller.confirmPasswordController,
+                          obscureText: true,
+                          prefixIcon: Icons.lock_reset_rounded,
+                          hintText: 'Re-enter password',
+                          textInputAction: TextInputAction.done,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // ── Sign Up button ───────────────────────────────────────────
                   SizedBox(
                     width: double.infinity,
-                    child: Obx(() => CMButton(
-                          label: 'Sign Up',
-                          loading: controller.isLoading.value,
-                          icon: Icons.arrow_forward_rounded,
-                          onPressed: () async {
-                            bool success = await controller.register();
-                            if (success && context.mounted) {
-                              context.go('/home');
-                            }
-                          },
+                    height: 58,
+                    child: Obx(() => ElevatedButton(
+                          onPressed: controller.isLoading.value
+                              ? null
+                              : () async {
+                                  final result = await controller.register();
+                                  if (result == RegisterResult.sessionCreated &&
+                                      context.mounted) {
+                                    context.go('/home');
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigoAccent,
+                            disabledBackgroundColor:
+                                Colors.indigoAccent.withValues(alpha: 0.6),
+                            elevation: 4,
+                            shadowColor: Colors.indigoAccent.withValues(alpha: 0.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: controller.isLoading.value
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  'Sign up',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         )),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  // ── Login redirect ────────────────────────────
-                  Center(
-                    child: GestureDetector(
-                      onTap: () => context.go('/login'),
-                      child: RichText(
-                        text: const TextSpan(
-                          text: 'Already have an account? ',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'Log in',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                  // ── Already have an account link ─────────────────────────────
+                  TextButton(
+                    onPressed: () => context.go('/login'),
+                    child: Text(
+                      'Already have an account',
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
                     ),
                   ),
 
-                  const Spacer(flex: 2),
+                  const SizedBox(height: 36),
+
+                  // ── Or continue with ─────────────────────────────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.indigoAccent.withValues(alpha: 0.25),
+                          thickness: 1,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Or continue with',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigoAccent,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.indigoAccent.withValues(alpha: 0.25),
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Sign in with Google button ───────────────────────────────
+                  IconButton(
+                    onPressed: () async {
+                      final success = await controller.signInWithGoogle();
+                      if (success && context.mounted) {
+                        context.go('/home');
+                      }
+                    },
+                    icon: const FaIcon(
+                      FontAwesomeIcons.google,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.yellow[700],
+                      padding: const EdgeInsets.all(16),
+                      elevation: 3,
+                      shadowColor: (Colors.yellow[700] ?? Colors.orange)
+                          .withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Private reusable input field widget
-// ─────────────────────────────────────────────────────────────────
-class _InputField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final bool obscureText;
-  final bool autofocus;
-  final TextInputType? keyboardType;
-  final void Function(String)? onSubmitted;
-
-  const _InputField({
-    required this.controller,
-    required this.hint,
-    this.obscureText = false,
-    this.autofocus = false,
-    this.keyboardType,
-    this.onSubmitted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        autofocus: autofocus,
-        keyboardType: keyboardType,
-        onSubmitted: onSubmitted,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(
-            color: AppColors.textMuted,
-            fontWeight: FontWeight.w400,
-          ),
-          contentPadding: const EdgeInsets.all(16),
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
         ),
       ),
     );

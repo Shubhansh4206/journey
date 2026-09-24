@@ -1,30 +1,34 @@
 import 'package:flutter/material.dart';
 
-/// ── Design System Color Tokens ──────────────────────────────────────────────
-/// Curated dark-mode palette for Journey.
+/// ── Theme Color Palette ──────────────────────────────────────────────────
+/// Indigo Accent & Clean Light / Modern UI matching user specifications.
 class AppColors {
   AppColors._();
 
-  // ── Backgrounds ───────────────────────────────────────────────────────────
-  static const Color background = Color(0xFF0A0A0F);
-  static const Color surface = Color(0xFF14141F);
-  static const Color surfaceElevated = Color(0xFF1C1C2A);
+  // ── Primary ───────────────────────────────────────────────────────────────
+  static const Color primary = Colors.indigoAccent;
+  static const Color primaryDark = Color(0xFF3F51B5);
+  static const Color primaryLight = Color(0xFFE0E7FF);
+  static const Color primaryMuted = Color(0x1F536DFE); // 12% opacity
 
-  // ── Primary Accent (vibrant teal-cyan) ────────────────────────────────────
-  static const Color primary = Color(0xFF00D4AA);
-  static const Color primaryMuted = Color(0x1A00D4AA); // 10% opacity
+  // ── Backgrounds ───────────────────────────────────────────────────────────
+  static const Color background = Colors.white;
+  static const Color scaffoldBackground = Color(0xFFF8FAFC);
+  static const Color surface = Colors.white;
+  static const Color inputFill = Color(0xFFF1F4FF);
 
   // ── Text ──────────────────────────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFFF0F0F5);
-  static const Color textSecondary = Color(0xFF8E8EA0);
-  static const Color textMuted = Color(0xFF52526A);
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF64748B);
+  static const Color textMuted = Color(0xFF94A3B8);
 
-  // ── Borders & Dividers ────────────────────────────────────────────────────
-  static const Color border = Color(0xFF2A2A3D);
-  static const Color borderFocused = Color(0xFF00D4AA);
+  // ── Borders ───────────────────────────────────────────────────────────────
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color borderFocused = Colors.indigoAccent;
 
-  // ── Semantic ──────────────────────────────────────────────────────────────
-  static const Color danger = Color(0xFFFF6B6B);
-  static const Color warning = Color(0xFFFFB347);
-  static const Color success = Color(0xFF00D4AA);
+  // ── Social & Semantic ─────────────────────────────────────────────────────
+  static final Color googleButton = Colors.yellow[700] ?? const Color(0xFFFBC02D);
+  static const Color danger = Color(0xFFEF4444);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color success = Color(0xFF10B981);
 }

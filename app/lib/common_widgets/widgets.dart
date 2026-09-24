@@ -1,87 +1,112 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../utils/colors.dart';
-import '../utils/theme.dart';
 
-/// ── Journey Primary Button ──────────────────────────────────────────────────
-/// A premium, animated button with loading state and optional icon.
-class CMButton extends StatelessWidget {
+export 'custom_text_field.dart';
+
+/// ── Primary Indigo Action Button ──────────────────────────────────────────
+/// Matches user's UI theme with elevation, rounded borders, and loading state.
+class CustomPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
-  final IconData? icon;
+  final double? width;
+  final double height;
 
-  const CMButton({
+  const CustomPrimaryButton({
     super.key,
     required this.label,
-    this.onPressed,
+    required this.onPressed,
     this.loading = false,
-    this.icon,
+    this.width,
+    this.height = 56,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      height: 54,
+    return Container(
+      width: width ?? double.infinity,
+      height: height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        gradient: onPressed != null && !loading
-            ? const LinearGradient(
-                colors: [AppColors.primary, Color(0xFF00B894)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: onPressed == null || loading
-            ? AppColors.textMuted.withValues(alpha: 0.3)
-            : null,
+        borderRadius: BorderRadius.circular(10),
         boxShadow: onPressed != null && !loading
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.25),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+                  color: AppColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 15,
+                  offset: const Offset(0, 6),
                 ),
               ]
             : null,
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          onTap: loading ? null : onPressed,
-          child: Center(
-            child: loading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.background),
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.background,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      if (icon != null) ...[
-                        const SizedBox(width: 8),
-                        Icon(icon, size: 18, color: AppColors.background),
-                      ],
-                    ],
-                  ),
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
         ),
+        child: loading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// ── Social OAuth Button (Google) ──────────────────────────────────────────
+/// Matches user's exact yellow[700] rounded button styling with ripple effect.
+class SocialIconButton extends StatelessWidget {
+  final Widget icon;
+  final VoidCallback onPressed;
+  final Color? backgroundColor;
+
+  const SocialIconButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.backgroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: backgroundColor ?? AppColors.googleButton,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: (backgroundColor ?? AppColors.googleButton)
+                  .withValues(alpha: 0.35),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: icon,
       ),
     );
   }

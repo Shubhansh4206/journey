@@ -9,8 +9,9 @@ class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  var isLoading = false.obs;
-  var errorMessage = RxnString();
+  final isLoading = false.obs;
+  final errorMessage = RxnString();
+  final infoMessage = RxnString();
 
   @override
   void onClose() {
@@ -34,20 +35,92 @@ class LoginController extends GetxController {
 
     isLoading.value = true;
     errorMessage.value = null;
+    infoMessage.value = null;
 
     try {
-      await _authService.loginWithEmail(email: email, password: password);
-      return true; // Success
+      final res = await _authService.loginWithEmail(
+        email: email,
+        password: password,
+      );
 
+      if (res.user != null) {
+        return true;
+      }
+      return false;
     } on AuthException catch (e) {
-      // Usually "Invalid login credentials"
-      errorMessage.value = e.message;
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        errorMessage.value =
+            'Email not verified yet. Please check your inbox for the confirmation link, or disable "Confirm email" in Supabase settings.';
+      } else {
+        errorMessage.value = e.message;
+      }
       return false;
     } catch (e) {
       errorMessage.value = 'An unexpected error occurred. Please try again.';
       return false;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<bool> signInWithGoogle() async {
+    isLoading.value = true;
+    errorMessage.value = null;
+    try {
+      final success = await _authService.signInWithGoogle();
+      return success;
+    } on AuthException catch (e) {
+      errorMessage.value = e.message;
+      return false;
+    } catch (e) {
+      errorMessage.value = 'Google sign-in failed. Please verify Supabase OAuth settings.';
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<bool> sendPasswordReset(String email) async {
+    final cleanEmail = email.trim();
+    if (!GetUtils.isEmail(cleanEmail)) {
+      Get.snackbar(
+        'Invalid Email',
+        'Please enter a valid email address to reset password.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    try {
+      await _authService.sendPasswordReset(cleanEmail);
+      Get.snackbar(
+        'Email Sent',
+        'Password reset link has been sent to $cleanEmail',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      return true;
+    } on AuthException catch (e) {
+      Get.snackbar(
+        'Reset Failed',
+        e.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Could not send reset email. Please try again later.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
     }
   }
 }
