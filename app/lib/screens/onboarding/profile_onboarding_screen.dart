@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../common_widgets/widgets.dart';
 import '../../controllers/profile_controller.dart';
+import '../../models/user_profile.dart';
 import '../../utils/colors.dart';
 
 class ProfileOnboardingScreen extends StatelessWidget {
   ProfileOnboardingScreen({super.key});
 
-  final ProfileController controller = Get.put(ProfileController());
+  // Inject ProfileController
+  final ProfileController profileController = Get.put(ProfileController());
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +46,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.indigoAccent.withValues(alpha: 0.12),
-                          const Color(0xFFE0E7FF).withValues(alpha: 0.4),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: themeHeaderGradient(),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: Colors.indigoAccent.withValues(alpha: 0.2),
@@ -97,11 +93,11 @@ class ProfileOnboardingScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
 
                   // ── Error Notice Banner ──────────────────────────────────
                   Obx(() {
-                    final err = controller.errorMessage.value;
+                    final err = profileController.errorMessage.value;
                     if (err == null) return const SizedBox.shrink();
 
                     return Container(
@@ -114,6 +110,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                         border: Border.all(color: const Color(0xFFFCA5A5)),
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Icon(Icons.error_outline_rounded,
                               color: AppColors.danger, size: 20),
@@ -138,7 +135,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                   const SizedBox(height: 14),
                   CustomTextField(
                     label: 'Full Name *',
-                    controller: controller.fullNameController,
+                    controller: profileController.fullNameController,
                     prefixIcon: Icons.badge_outlined,
                     hintText: 'e.g. Alex Smith',
                     textInputAction: TextInputAction.next,
@@ -149,7 +146,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                       Expanded(
                         child: CustomTextField(
                           label: 'Age',
-                          controller: controller.ageController,
+                          controller: profileController.ageController,
                           keyboardType: TextInputType.number,
                           prefixIcon: Icons.calendar_today_outlined,
                           hintText: 'e.g. 26',
@@ -160,7 +157,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                       Expanded(
                         child: CustomTextField(
                           label: 'Phone',
-                          controller: controller.phoneController,
+                          controller: profileController.phoneController,
                           keyboardType: TextInputType.phone,
                           prefixIcon: Icons.phone_outlined,
                           hintText: '+91 9876543210',
@@ -185,7 +182,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                         runSpacing: 8,
                         children: ProfileController.genderOptions.map((gender) {
                           final isSelected =
-                              controller.selectedGender.value == gender;
+                              profileController.selectedGender.value == gender;
                           return ChoiceChip(
                             label: Text(gender),
                             labelStyle: GoogleFonts.poppins(
@@ -209,7 +206,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                               ),
                             ),
                             onSelected: (selected) {
-                              controller.selectedGender.value =
+                              profileController.selectedGender.value =
                                   selected ? gender : null;
                             },
                           );
@@ -228,7 +225,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                         children: ProfileController.travelExperienceOptions
                             .map((exp) {
                           final isSelected =
-                              controller.selectedTravelExperience.value == exp;
+                              profileController.selectedTravelExperience.value == exp;
                           return ChoiceChip(
                             label: Text(exp),
                             labelStyle: GoogleFonts.poppins(
@@ -252,7 +249,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                               ),
                             ),
                             onSelected: (selected) {
-                              controller.selectedTravelExperience.value =
+                              profileController.selectedTravelExperience.value =
                                   selected ? exp : null;
                             },
                           );
@@ -278,7 +275,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                         runSpacing: 8,
                         children:
                             ProfileController.environmentOptions.map((env) {
-                          final isSelected = controller
+                          final isSelected = profileController
                               .selectedEnvironmentPreferences
                               .contains(env);
                           return FilterChip(
@@ -304,7 +301,8 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                     : Colors.transparent,
                               ),
                             ),
-                            onSelected: (_) => controller.toggleEnvironment(env),
+                            onSelected: (_) =>
+                                profileController.toggleEnvironment(env),
                           );
                         }).toList(),
                       )),
@@ -320,7 +318,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                         runSpacing: 8,
                         children:
                             ProfileController.accommodationOptions.map((acc) {
-                          final isSelected = controller
+                          final isSelected = profileController
                               .selectedAccommodationStandard
                               .contains(acc);
                           return FilterChip(
@@ -347,7 +345,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                               ),
                             ),
                             onSelected: (_) =>
-                                controller.toggleAccommodation(acc),
+                                profileController.toggleAccommodation(acc),
                           );
                         }).toList(),
                       )),
@@ -362,8 +360,9 @@ class ProfileOnboardingScreen extends StatelessWidget {
                         spacing: 8,
                         runSpacing: 8,
                         children: ProfileController.dietaryOptions.map((diet) {
-                          final isSelected =
-                              controller.selectedDietaryNeeds.contains(diet);
+                          final isSelected = profileController
+                              .selectedDietaryNeeds
+                              .contains(diet);
                           return FilterChip(
                             label: Text(diet),
                             labelStyle: GoogleFonts.poppins(
@@ -387,7 +386,8 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                     : Colors.transparent,
                               ),
                             ),
-                            onSelected: (_) => controller.toggleDietary(diet),
+                            onSelected: (_) =>
+                                profileController.toggleDietary(diet),
                           );
                         }).toList(),
                       )),
@@ -422,10 +422,10 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   color: AppColors.textSecondary,
                                 ),
                               ),
-                              value: controller.isSmoker.value,
-                              activeColor: Colors.indigoAccent,
+                              value: profileController.isSmoker.value,
+                              activeTrackColor: Colors.indigoAccent,
                               onChanged: (val) =>
-                                  controller.isSmoker.value = val,
+                                  profileController.isSmoker.value = val,
                             )),
                         const Divider(height: 1),
                         Obx(() => SwitchListTile(
@@ -444,10 +444,10 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   color: AppColors.textSecondary,
                                 ),
                               ),
-                              value: controller.isDrinker.value,
-                              activeColor: Colors.indigoAccent,
+                              value: profileController.isDrinker.value,
+                              activeTrackColor: Colors.indigoAccent,
                               onChanged: (val) =>
-                                  controller.isDrinker.value = val,
+                                  profileController.isDrinker.value = val,
                             )),
                       ],
                     ),
@@ -455,24 +455,73 @@ class ProfileOnboardingScreen extends StatelessWidget {
 
                   const SizedBox(height: 40),
 
-                  // ── Submit Button ─────────────────────────────────────────
+                  // ── "Complete Profile" Button ─────────────────────────────
                   SizedBox(
                     width: double.infinity,
                     height: 58,
                     child: Obx(() => ElevatedButton(
-                          onPressed: controller.isLoading.value
+                          onPressed: profileController.isLoading.value
                               ? null
                               : () async {
-                                  final success =
-                                      await controller.saveProfile();
+                                  final currentUser =
+                                      Supabase.instance.client.auth.currentUser;
+                                  if (currentUser == null) {
+                                    profileController.errorMessage.value =
+                                        'No authenticated user found. Please sign in or create an account first.';
+                                    return;
+                                  }
+
+                                  final fullName = profileController
+                                      .fullNameController.text
+                                      .trim();
+                                  if (fullName.isEmpty) {
+                                    profileController.errorMessage.value =
+                                        'Please enter your full name';
+                                    return;
+                                  }
+
+                                  final userProfile = UserProfile(
+                                    id: currentUser.id,
+                                    fullName: fullName,
+                                    age: int.tryParse(profileController
+                                        .ageController.text
+                                        .trim()),
+                                    gender: profileController
+                                        .selectedGender.value,
+                                    phoneNumber: profileController
+                                            .phoneController.text
+                                            .trim()
+                                            .isEmpty
+                                        ? null
+                                        : profileController
+                                            .phoneController.text
+                                            .trim(),
+                                    travelExperience: profileController
+                                        .selectedTravelExperience.value,
+                                    environmentPreferences: profileController
+                                        .selectedEnvironmentPreferences
+                                        .toList(),
+                                    accommodationStandard: profileController
+                                        .selectedAccommodationStandard
+                                        .toList(),
+                                    dietaryNeeds: profileController
+                                        .selectedDietaryNeeds
+                                        .toList(),
+                                    isSmoker:
+                                        profileController.isSmoker.value,
+                                    isDrinker:
+                                        profileController.isDrinker.value,
+                                  );
+
+                                  final success = await profileController
+                                      .saveProfile(userProfile);
+
                                   if (success && context.mounted) {
-                                    Get.snackbar(
-                                      'Welcome to Journey!',
-                                      'Your profile is set up and ready to go.',
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      backgroundColor: Colors.indigoAccent,
-                                      colorText: Colors.white,
-                                      duration: const Duration(seconds: 3),
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Profile saved successfully! Welcome to Journey.'),
+                                        backgroundColor: Colors.green,
+                                      ),
                                     );
                                     context.go('/home');
                                   }
@@ -488,7 +537,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: controller.isLoading.value
+                          child: profileController.isLoading.value
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,
@@ -499,7 +548,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   ),
                                 )
                               : Text(
-                                  'Complete Profile & Explore',
+                                  'Complete profile',
                                   style: GoogleFonts.poppins(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
@@ -516,6 +565,17 @@ class ProfileOnboardingScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  LinearGradient themeHeaderGradient() {
+    return LinearGradient(
+      colors: [
+        Colors.indigoAccent.withValues(alpha: 0.12),
+        const Color(0xFFE0E7FF).withValues(alpha: 0.4),
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
     );
   }
 

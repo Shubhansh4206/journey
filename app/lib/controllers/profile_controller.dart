@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_profile.dart';
-import '../services/profile_service.dart';
 
 class ProfileController extends GetxController {
-  final ProfileService _profileService = ProfileService();
+  // Reactive loading & error state
+  final isLoading = false.obs;
+  final errorMessage = RxnString();
 
-  // Controllers
+  // Form field controllers
   final fullNameController = TextEditingController();
   final ageController = TextEditingController();
   final phoneController = TextEditingController();
 
-  // Observable selections
+  // Reactive selection state
   final selectedGender = RxnString();
   final selectedTravelExperience = RxnString();
   final selectedEnvironmentPreferences = <String>[].obs;
@@ -20,9 +21,6 @@ class ProfileController extends GetxController {
   final selectedDietaryNeeds = <String>[].obs;
   final isSmoker = false.obs;
   final isDrinker = false.obs;
-
-  final isLoading = false.obs;
-  final errorMessage = RxnString();
 
   // Preset options
   static const List<String> genderOptions = [
@@ -83,6 +81,7 @@ class ProfileController extends GetxController {
     super.onClose();
   }
 
+  /// Load any existing profile data from Supabase for the current user
   void loadExistingProfile() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -99,25 +98,36 @@ class ProfileController extends GetxController {
       phoneController.text = metaPhone;
     }
 
-    // Try fetching existing profile from database
-    final existing = await _profileService.getProfile(user.id);
-    if (existing != null) {
-      if (existing.fullName.isNotEmpty) {
-        fullNameController.text = existing.fullName;
+    try {
+      final data = await Supabase.instance.client
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (data != null) {
+        final existing = UserProfile.fromJson(data);
+        if (existing.fullName.isNotEmpty) {
+          fullNameController.text = existing.fullName;
+        }
+        if (existing.age != null) {
+          ageController.text = existing.age.toString();
+        }
+        if (existing.phoneNumber != null) {
+          phoneController.text = existing.phoneNumber!;
+        }
+        selectedGender.value = existing.gender;
+        selectedTravelExperience.value = existing.travelExperience;
+        selectedEnvironmentPreferences
+            .assignAll(existing.environmentPreferences);
+        selectedAccommodationStandard
+            .assignAll(existing.accommodationStandard);
+        selectedDietaryNeeds.assignAll(existing.dietaryNeeds);
+        isSmoker.value = existing.isSmoker;
+        isDrinker.value = existing.isDrinker;
       }
-      if (existing.age != null) {
-        ageController.text = existing.age.toString();
-      }
-      if (existing.phoneNumber != null) {
-        phoneController.text = existing.phoneNumber!;
-      }
-      selectedGender.value = existing.gender;
-      selectedTravelExperience.value = existing.travelExperience;
-      selectedEnvironmentPreferences.assignAll(existing.environmentPreferences);
-      selectedAccommodationStandard.assignAll(existing.accommodationStandard);
-      selectedDietaryNeeds.assignAll(existing.dietaryNeeds);
-      isSmoker.value = existing.isSmoker;
-      isDrinker.value = existing.isDrinker;
+    } catch (e) {
+      debugPrint('Notice: Error loading existing profile: $e');
     }
   }
 
@@ -152,54 +162,40 @@ class ProfileController extends GetxController {
     }
   }
 
-  Future<bool> saveProfile() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) {
-      errorMessage.value = 'User is not logged in. Please sign in again.';
+  /// Saves the user profile to Supabase 'profiles' table
+  Future<bool> saveProfile(UserProfile profile) async {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser == null) {
+      errorMessage.value =
+          'No authenticated user found. Please sign in or create an account first.';
+      debugPrint('Error: currentUser is null when saving profile');
       return false;
     }
-
-    final name = fullNameController.text.trim();
-    if (name.isEmpty) {
-      errorMessage.value = 'Please enter your full name';
-      return false;
-    }
-
-    int? parsedAge;
-    if (ageController.text.trim().isNotEmpty) {
-      parsedAge = int.tryParse(ageController.text.trim());
-      if (parsedAge == null || parsedAge < 10 || parsedAge > 120) {
-        errorMessage.value = 'Please enter a valid age (10 - 120)';
-        return false;
-      }
-    }
-
-    isLoading.value = true;
-    errorMessage.value = null;
 
     try {
-      final profile = UserProfile(
-        id: user.id,
-        fullName: name,
-        age: parsedAge,
-        gender: selectedGender.value,
-        phoneNumber: phoneController.text.trim().isEmpty
-            ? null
-            : phoneController.text.trim(),
-        travelExperience: selectedTravelExperience.value,
-        environmentPreferences: selectedEnvironmentPreferences.toList(),
-        accommodationStandard: selectedAccommodationStandard.toList(),
-        dietaryNeeds: selectedDietaryNeeds.toList(),
-        isSmoker: isSmoker.value,
-        isDrinker: isDrinker.value,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      isLoading.value = true;
+      errorMessage.value = null;
 
-      final success = await _profileService.saveProfile(profile);
-      return success;
-    } catch (e) {
-      errorMessage.value = 'Could not save profile. Please try again.';
+      final payload = profile.toJson();
+      debugPrint('Saving profile to Supabase: $payload');
+
+      // Upsert profile data into the Supabase 'profiles' table
+      await Supabase.instance.client.from('profiles').upsert(payload);
+
+      debugPrint('Profile successfully saved to Supabase!');
+      return true;
+    } on PostgrestException catch (e) {
+      debugPrint('Supabase PostgrestException: ${e.message} (details: ${e.details}, code: ${e.code})');
+      if (e.code == '42501' || e.message.toLowerCase().contains('policy') || e.message.toLowerCase().contains('permission')) {
+        errorMessage.value =
+            'Database permission denied: Please make sure your Supabase "profiles" table has an INSERT/UPDATE RLS policy enabled for authenticated users.';
+      } else {
+        errorMessage.value = 'Database error: ${e.message}';
+      }
+      return false;
+    } catch (error) {
+      debugPrint('General error saving profile: $error');
+      errorMessage.value = 'Failed to save profile: $error';
       return false;
     } finally {
       isLoading.value = false;

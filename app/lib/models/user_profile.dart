@@ -10,8 +10,6 @@ class UserProfile {
   final List<String> dietaryNeeds;
   final bool isSmoker;
   final bool isDrinker;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
 
   UserProfile({
     required this.id,
@@ -25,8 +23,6 @@ class UserProfile {
     this.dietaryNeeds = const [],
     this.isSmoker = false,
     this.isDrinker = false,
-    this.createdAt,
-    this.updatedAt,
   });
 
   /// Factory constructor to generate the model from Supabase JSON response
@@ -45,17 +41,10 @@ class UserProfile {
       dietaryNeeds: List<String>.from(json['dietary_needs'] ?? []),
       isSmoker: json['is_smoker'] as bool? ?? false,
       isDrinker: json['is_drinker'] as bool? ?? false,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'].toString())
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'].toString())
-          : null,
     );
   }
 
-  /// Converts the model back to JSON for Supabase INSERT/UPDATE operations
-  /// Note: The 'embedding' field is excluded here as it is generated server-side by the MAS
+  /// Converts the model to JSON mapping exactly to the Supabase profiles schema
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -72,7 +61,7 @@ class UserProfile {
     };
   }
 
-  /// Helper copyWith method for state management (GetX/Riverpod)
+  /// Helper copyWith method
   UserProfile copyWith({
     String? fullName,
     int? age,
@@ -99,14 +88,15 @@ class UserProfile {
       dietaryNeeds: dietaryNeeds ?? this.dietaryNeeds,
       isSmoker: isSmoker ?? this.isSmoker,
       isDrinker: isDrinker ?? this.isDrinker,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
     );
   }
 
   /// Returns true if essential onboarding profile details have been filled
   bool get isCompleted {
     return fullName.trim().isNotEmpty &&
-        (age != null || gender != null || travelExperience != null || environmentPreferences.isNotEmpty);
+        (age != null ||
+            gender != null ||
+            travelExperience != null ||
+            environmentPreferences.isNotEmpty);
   }
 }
