@@ -20,58 +20,50 @@ class MainLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          navigationShell,
-          Positioned(
-            bottom: 24,
-            left: 24,
-            right: 24,
-            child: Container(
-              height: 70,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(35),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  )
-                ],
+      body: navigationShell,
+      bottomNavigationBar: Container(
+        height: 70, // Keep height consistent, safe area applied via child
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            )
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildNavItem(
+                icon: Icons.home_rounded,
+                index: 0,
+                label: 'Home',
+                currentIndex: navigationShell.currentIndex,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildNavItem(
-                    icon: Icons.home_rounded,
-                    index: 0,
-                    label: 'Home',
-                    currentIndex: navigationShell.currentIndex,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.explore_rounded,
-                    index: 1,
-                    label: 'Packages',
-                    currentIndex: navigationShell.currentIndex,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.groups_rounded,
-                    index: 2,
-                    label: 'Solo Comm',
-                    currentIndex: navigationShell.currentIndex,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.person_rounded,
-                    index: 3,
-                    label: 'Profile',
-                    currentIndex: navigationShell.currentIndex,
-                  ),
-                ],
+              _buildNavItem(
+                icon: Icons.explore_rounded,
+                index: 1,
+                label: 'Packages',
+                currentIndex: navigationShell.currentIndex,
               ),
-            ),
+              _buildNavItem(
+                icon: Icons.groups_rounded,
+                index: 2,
+                label: 'Solo Comm',
+                currentIndex: navigationShell.currentIndex,
+              ),
+              _buildNavItem(
+                icon: Icons.person_rounded,
+                index: 3,
+                label: 'Profile',
+                currentIndex: navigationShell.currentIndex,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
