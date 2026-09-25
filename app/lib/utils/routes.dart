@@ -9,9 +9,6 @@ import '../screens/packages_screen.dart';
 import '../screens/solo_comm_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/main_layout.dart';
-import '../screens/create_group_screen.dart';
-import '../screens/group_detail_screen.dart';
-import '../screens/pending_invites_screen.dart';
 import '../services/profile_service.dart';
 
 /// ── App Router ──────────────────────────────────────────────────────────────
@@ -55,20 +52,6 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => ProfileOnboardingScreen(),
-    ),
-    GoRoute(
-      path: '/create_group',
-      builder: (context, state) => const CreateGroupScreen(),
-    ),
-    GoRoute(
-      path: '/group/:groupId',
-      builder: (context, state) => GroupDetailScreen(
-        groupId: state.pathParameters['groupId']!,
-      ),
-    ),
-    GoRoute(
-      path: '/invites',
-      builder: (context, state) => const PendingInvitesScreen(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
