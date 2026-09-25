@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/colors.dart';
+import '../models/trip_request.dart';
+import '../services/home_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,9 +14,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+
+  TripRequest? _activeTrip;
+  List<Map<String, dynamic>> _openSquads = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -27,6 +32,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final service = HomeService();
+    final activeTrip = await service.getActiveTrip();
+    final openSquads = await service.getOpenSquads();
+    if (mounted) {
+      setState(() {
+        _activeTrip = activeTrip;
+        _openSquads = openSquads;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -45,10 +64,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     return Scaffold(
       backgroundColor: AppColors.offWhite,
-      body: Stack(
-        children: [
-          SafeArea(
-            bottom: false,
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator()) 
+        : SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 120),
               child: Column(
@@ -56,15 +74,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 children: [
                   _buildHeader(userName),
                   _buildHeroWidget(),
+                  _buildMakeGroupAction(),
                   _buildStatusCard(),
                   _buildOpenSquadsFeed(),
                 ],
               ),
             ),
           ),
-          _buildBottomNavigationBar(),
-        ],
-      ),
     );
   }
 
@@ -82,10 +98,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   await Supabase.instance.client.auth.signOut();
                   if (mounted) context.go('/login');
                 },
-                child: const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppColors.primaryLight,
-                  backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.primaryLight,
+                      backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                    ),
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: AppColors.electricYellow,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: AppColors.darkCharcoal,
+                          size: 10,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
@@ -195,7 +232,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  Widget _buildMakeGroupAction() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: OutlinedButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.group_add, color: AppColors.darkCharcoal),
+          label: Text(
+            'Make a Group',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.darkCharcoal,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: AppColors.border, width: 2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatusCard() {
+    if (_activeTrip == null || _activeTrip!.status != 'reviewing_bids') {
+      return const SizedBox.shrink();
+    }
+
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (context, child) {
@@ -205,11 +275,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              color: AppColors.punchPink,
+              color: AppColors.electricYellow,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.punchPink.withValues(alpha: 0.4),
+                  color: AppColors.electricYellow.withValues(alpha: 0.4),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 )
@@ -217,14 +287,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             child: Row(
               children: [
-                const Icon(Icons.auto_awesome, color: Colors.white),
+                const Icon(Icons.bolt, color: AppColors.darkCharcoal),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Goa Squad: AI is drafting your quotes',
+                    '${_activeTrip!.destination} Trip: Operators are actively quoting',
                     style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkCharcoal,
+                      fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
                   ),
@@ -238,6 +308,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildOpenSquadsFeed() {
+    if (_openSquads.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final bgColors = [AppColors.electricYellow, AppColors.electricBlue, AppColors.vibrantPurple];
+    final textColors = [AppColors.darkCharcoal, Colors.white, Colors.white];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -254,32 +331,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
         SizedBox(
           height: 180,
-          child: ListView(
+          child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
-            children: [
-              _buildSquadCard(
-                title: 'Manali Adventure',
-                matchScore: '95% Match',
-                price: '₹6k → ₹4.5k',
-                backgroundColor: AppColors.electricYellow,
-                textColor: AppColors.darkCharcoal,
-              ),
-              _buildSquadCard(
-                title: 'Goa Getaway',
-                matchScore: '88% Match',
-                price: '₹12k → ₹8.5k',
-                backgroundColor: AppColors.electricBlue,
-                textColor: Colors.white,
-              ),
-              _buildSquadCard(
-                title: 'Kerala Backwaters',
-                matchScore: '92% Match',
-                price: '₹15k → ₹11k',
-                backgroundColor: AppColors.vibrantPurple,
-                textColor: Colors.white,
-              ),
-            ],
+            itemCount: _openSquads.length,
+            itemBuilder: (context, index) {
+              final squad = _openSquads[index];
+              final colorIdx = index % bgColors.length;
+              return _buildSquadCard(
+                title: squad['title'],
+                matchScore: squad['matchScore'],
+                originalPrice: squad['originalPrice'],
+                newPrice: squad['newPrice'],
+                backgroundColor: bgColors[colorIdx],
+                textColor: textColors[colorIdx],
+              );
+            },
           ),
         ),
       ],
@@ -289,7 +356,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildSquadCard({
     required String title,
     required String matchScore,
-    required String price,
+    required String originalPrice,
+    required String newPrice,
     required Color backgroundColor,
     required Color textColor,
   }) {
@@ -349,12 +417,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  price,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: textColor.withValues(alpha: 0.9),
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textColor.withValues(alpha: 0.9),
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '$originalPrice ',
+                        style: const TextStyle(decoration: TextDecoration.lineThrough),
+                      ),
+                      TextSpan(
+                        text: newPrice,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -365,74 +444,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildBottomNavigationBar() {
-    return Positioned(
-      bottom: 24,
-      left: 24,
-      right: 24,
-      child: Container(
-        height: 70,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(35),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            )
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavItem(icon: Icons.home_rounded, index: 0, label: 'Home'),
-            _buildNavItem(icon: Icons.explore_rounded, index: 1, label: 'Packages'),
-            _buildNavItem(icon: Icons.groups_rounded, index: 2, label: 'Solo Comm'),
-            _buildNavItem(icon: Icons.person_rounded, index: 3, label: 'Profile'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({required IconData icon, required int index, required String label}) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 60,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.electricBlue : Colors.grey.shade400,
-              size: 28,
-            ),
-            if (isSelected) ...[
-              const SizedBox(height: 4),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: AppColors.vibrantPurple,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ] else ...[
-              const SizedBox(height: 10), // keep spacing consistent
-            ]
-          ],
-        ),
-      ),
-    );
-  }
+  // Removed local bottom navigation bar
 
   Widget _buildTripBuilderBottomSheet() {
     return Container(
