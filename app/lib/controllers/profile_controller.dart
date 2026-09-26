@@ -32,9 +32,8 @@ class ProfileController extends GetxController {
 
   static const List<String> travelExperienceOptions = [
     'Beginner',
-    'Occasional Explorer',
-    'Frequent Adventurer',
-    'Globetrotter / Pro',
+    'Intermediary',
+    'Advanced',
   ];
 
   static const List<String> environmentOptions = [
