@@ -351,4 +351,61 @@ const List<CityCatalog> mockCities = [
       ),
     ],
   ),
+  CityCatalog(
+    id: 'udaipur',
+    name: 'Udaipur',
+    tagline: 'Lakes, royal palaces & sunsets',
+    imageUrl:
+        'https://images.unsplash.com/photo-1599661046827-dacff0c0f09a?w=800',
+    accent: AppColors.vibrantPurple,
+    hotels: [
+      CatalogItem(
+        id: 'udr-h1',
+        name: 'Pichola Lake Resort',
+        type: 'hotel',
+        price: 6800,
+        subtitle: 'Palace view balcony',
+      ),
+      CatalogItem(
+        id: 'udr-h2',
+        name: 'Fateh Sagar Hostel',
+        type: 'hotel',
+        price: 2200,
+        subtitle: 'Rooftop cafe & dorms',
+      ),
+    ],
+    activities: [
+      CatalogItem(
+        id: 'udr-a1',
+        name: 'Lake Pichola sunset boat',
+        type: 'activity',
+        price: 1200,
+        subtitle: '1 hour scenic boat ride',
+      ),
+      CatalogItem(
+        id: 'udr-a2',
+        name: 'Bagore Ki Haveli dance show',
+        type: 'activity',
+        price: 400,
+        subtitle: 'Folk performance at dusk',
+      ),
+    ],
+    places: [
+      CatalogItem(
+        id: 'udr-p1',
+        name: 'City Palace Udaipur',
+        type: 'place',
+        price: 300,
+        subtitle: 'Royal museum & courtyards',
+      ),
+      CatalogItem(
+        id: 'udr-p2',
+        name: 'Saheliyon Ki Bari',
+        type: 'place',
+        price: 100,
+        subtitle: 'Fountain gardens',
+      ),
+    ],
+  ),
 ];
+
