@@ -85,6 +85,14 @@ export const Header: React.FC<HeaderProps> = ({
               <UserCheck className="w-3.5 h-3.5 text-zinc-400" />
               Guides
             </button>
+
+            <a
+              href="/studio"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40 border border-indigo-800/50"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              Agent Studio
+            </a>
           </nav>
         </div>
 
