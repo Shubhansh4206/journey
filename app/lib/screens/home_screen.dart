@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../controllers/cart_controller.dart';
+import '../controllers/group_controller.dart';
 import '../data/mock_city_catalog.dart';
+import '../models/group_models.dart';
 import '../screens/itinerary_cart_screen.dart';
 import '../services/profile_service.dart';
 import '../services/group_service.dart';
 import '../utils/colors.dart';
+import '../widgets/swiggy_group_sheet.dart';
 import '../widgets/travel_mode_toggle.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,6 +23,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GroupService _groupService = GroupService();
+  late final CartController _cartController;
+  late final GroupController _groupController;
+
   bool _isSolo = false;
   String _searchQuery = '';
   String _selectedCategory = 'All';
@@ -34,7 +42,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _cartController = Get.isRegistered<CartController>()
+        ? Get.find<CartController>()
+        : Get.put(CartController());
+    _groupController = Get.isRegistered<GroupController>()
+        ? Get.find<GroupController>()
+        : Get.put(GroupController());
+
     _loadUserName();
+    _groupController.fetchUserGroups();
   }
 
   Future<void> _loadUserName() async {
@@ -146,6 +162,10 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(child: _buildModeBanner()),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
+            // Active Travel Squads Section
+            SliverToBoxAdapter(child: _buildActiveSquadsSection()),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
             // Destination Search Bar
             SliverToBoxAdapter(child: _buildSearchBar()),
             const SliverToBoxAdapter(child: SizedBox(height: 14)),
@@ -255,34 +275,116 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.location_on,
-                        color: Color(0xFFFC8019), size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      'New Delhi, IN',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.darkCharcoal,
+              // ── 1. Swiggy-style Active Squad Pill ───────────────────
+              Obx(() {
+                final active = _groupController.activeGroup.value;
+                final groupName = active?.name ?? 'Select Squad';
+                final hasGroup = active != null;
+
+                return GestureDetector(
+                  onTap: () => SwiggyGroupSheet.show(context),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: hasGroup
+                          ? Colors.indigo.shade50
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: hasGroup
+                            ? Colors.indigo.shade200
+                            : const Color(0xFFE2E8F0),
                       ),
                     ),
-                    const Icon(Icons.keyboard_arrow_down,
-                        color: AppColors.textMuted, size: 14),
-                  ],
-                ),
-              ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          hasGroup
+                              ? Icons.groups_rounded
+                              : Icons.group_add_outlined,
+                          color: hasGroup ? Colors.indigo : const Color(0xFFFC8019),
+                          size: 15,
+                        ),
+                        const SizedBox(width: 5),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 130),
+                          child: Text(
+                            groupName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: hasGroup
+                                  ? Colors.indigo.shade900
+                                  : AppColors.darkCharcoal,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.textMuted, size: 14),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+              // ── 2. Live Cart & Notifications ────────────────────────
               Row(
                 children: [
+                  // Live Cart Tracker Pill (Swiggy style)
+                  Obx(() {
+                    final count = _cartController.totalItemsCount;
+                    final hasCart = _cartController.hasActiveCart;
+                    if (!hasCart) return const SizedBox.shrink();
+
+                    return GestureDetector(
+                      onTap: () {
+                        final city = _cartController.activeCity.value ??
+                            mockCities.first;
+                        _openCart(city);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF2373F4), Color(0xFF9564DD)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF2373F4).withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.shopping_bag_outlined,
+                                color: Colors.white, size: 13),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$count · ${_cartController.formattedBudget}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+
+                  // Notification Bell with dynamic badge
                   FutureBuilder(
                     future: _groupService.getPendingInvitesForCurrentUser(),
                     builder: (context, snapshot) {
@@ -448,6 +550,293 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Active Squads Section (Swiggy Roster Style) ───────────────────────────
+  Widget _buildActiveSquadsSection() {
+    return Obx(() {
+      final groups = _groupController.myGroups;
+      if (groups.isEmpty) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.groups_rounded, color: Colors.indigo, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Plan with Friends',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkCharcoal,
+                      ),
+                    ),
+                    Text(
+                      'Create a squad to invite friends & split costs!',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  context.push('/create-group').then((_) {
+                    _groupController.fetchUserGroups();
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: const Text('Create', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'My Travel Squads',
+                      style: GoogleFonts.poppins(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkCharcoal,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${groups.length} Squad${groups.length == 1 ? '' : 's'}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => SwiggyGroupSheet.show(context),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: Colors.indigo,
+                  ),
+                  child: const Text('View All', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 125,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              scrollDirection: Axis.horizontal,
+              itemCount: groups.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final item = groups[index];
+                final isActive = _groupController.activeGroup.value?.id == item.group.id;
+
+                return GestureDetector(
+                  onTap: () {
+                    _groupController.selectActiveGroup(item.group);
+                    context.push('/group/${item.group.id}').then((_) {
+                      _groupController.fetchUserGroups();
+                    });
+                  },
+                  child: Container(
+                    width: 250,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: isActive ? Colors.indigo : const Color(0xFFE2E8F0),
+                        width: isActive ? 1.5 : 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: isActive ? Colors.indigo : Colors.indigo.shade50,
+                              child: Icon(
+                                Icons.groups_rounded,
+                                size: 18,
+                                color: isActive ? Colors.white : Colors.indigo,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.group.name,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.darkCharcoal,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    item.isLeader ? '👑 Leader: You' : 'Member',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: item.isLeader ? Colors.amber.shade900 : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildMiniAvatars(item.members),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${item.members.length} Joined',
+                                style: const TextStyle(
+                                  color: Colors.indigo,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildMiniAvatars(List<GroupMemberItem> members) {
+    const maxVisible = 3;
+    final visibleCount = members.length > maxVisible ? maxVisible : members.length;
+    final extra = members.length - maxVisible;
+
+    return Row(
+      children: [
+        SizedBox(
+          height: 24,
+          width: visibleCount * 18.0 + (extra > 0 ? 24 : 6),
+          child: Stack(
+            children: [
+              for (int i = 0; i < visibleCount; i++)
+                Positioned(
+                  left: i * 16.0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: CircleAvatar(
+                      radius: 11,
+                      backgroundColor: Colors.indigo.shade200,
+                      child: Text(
+                        members[i].fullName.isNotEmpty ? members[i].fullName[0].toUpperCase() : 'U',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo.shade900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (extra > 0)
+                Positioned(
+                  left: visibleCount * 16.0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: CircleAvatar(
+                      radius: 11,
+                      backgroundColor: Colors.grey.shade300,
+                      child: Text(
+                        '+$extra',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

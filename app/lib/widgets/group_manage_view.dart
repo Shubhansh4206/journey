@@ -102,7 +102,11 @@ class _GroupManageViewState extends State<GroupManageView> {
       }
 
       // 2. Dispatch invitation
-      await _groupService.sendInvite(groupId: widget.groupId, userId: user.id);
+      await _groupService.sendInvite(
+        groupId: widget.groupId,
+        userId: user.id,
+        groupName: _group?.name,
+      );
       _emailController.clear();
       if (mounted) {
         FocusScope.of(context).unfocus();

@@ -109,6 +109,8 @@ class GroupService {
   Future<bool> sendInvite({
     required String groupId,
     required String userId,
+    String? groupName,
+    String? inviterName,
   }) async {
     final inviterId = currentUserId;
     debugPrint('💌 [GroupService.sendInvite] Starting: groupId=$groupId, inviterId=$inviterId, inviteeId=$userId');
@@ -119,7 +121,25 @@ class GroupService {
     }
 
     try {
-      // Check if user is already in the group
+      // 1. Resolve group name
+      String resolvedGroupName = groupName ?? '';
+      if (resolvedGroupName.isEmpty) {
+        try {
+          final g = await _supabase.from('groups').select('name').eq('id', groupId).maybeSingle();
+          if (g != null && g['name'] != null) resolvedGroupName = g['name'];
+        } catch (_) {}
+      }
+
+      // 2. Resolve inviter name
+      String resolvedInviterName = inviterName ?? '';
+      if (resolvedInviterName.isEmpty) {
+        try {
+          final p = await _supabase.from('user_profiles').select('full_name').eq('id', inviterId).maybeSingle();
+          if (p != null && p['full_name'] != null) resolvedInviterName = p['full_name'];
+        } catch (_) {}
+      }
+
+      // 3. Check if user is already in the group
       debugPrint('⏳ [GroupService.sendInvite] Checking existing membership in group_members...');
       final existingMember = await _supabase
           .from('group_members')
@@ -133,7 +153,7 @@ class GroupService {
         throw Exception('User is already a member of this group.');
       }
 
-      // Check if there is already a pending invite in group_invitations
+      // 4. Check if there is already a pending invite in group_invitations
       debugPrint('⏳ [GroupService.sendInvite] Checking existing pending invites in group_invitations...');
       final existingInvite = await _supabase
           .from('group_invitations')
@@ -148,16 +168,29 @@ class GroupService {
         throw Exception('An active invitation has already been sent to this user.');
       }
 
-      // Insert into group_invitations
+      // 5. Insert into group_invitations with group_name and inviter_name
       debugPrint('⏳ [GroupService.sendInvite] Inserting into `group_invitations` table...');
-      final insertResult = await _supabase.from('group_invitations').insert({
-        'group_id': groupId,
-        'inviter_id': inviterId,
-        'invitee_id': userId,
-        'status': 'pending',
-      }).select();
+      try {
+        final insertResult = await _supabase.from('group_invitations').insert({
+          'group_id': groupId,
+          'inviter_id': inviterId,
+          'invitee_id': userId,
+          'status': 'pending',
+          'group_name': resolvedGroupName.isNotEmpty ? resolvedGroupName : 'Travel Squad',
+          'inviter_name': resolvedInviterName.isNotEmpty ? resolvedInviterName : 'Group Leader',
+        }).select();
+        debugPrint('✅ [GroupService.sendInvite] Invitation inserted successfully with group_name: $insertResult');
+      } catch (insertErr) {
+        debugPrint('Notice: group_name column might not exist yet, trying standard insert: $insertErr');
+        final insertResult = await _supabase.from('group_invitations').insert({
+          'group_id': groupId,
+          'inviter_id': inviterId,
+          'invitee_id': userId,
+          'status': 'pending',
+        }).select();
+        debugPrint('✅ [GroupService.sendInvite] Standard invitation inserted: $insertResult');
+      }
 
-      debugPrint('✅ [GroupService.sendInvite] Invitation inserted successfully: $insertResult');
       return true;
     } on PostgrestException catch (e) {
       debugPrint('❌ [GroupService.sendInvite] PostgrestException: code=${e.code}, msg=${e.message}, details=${e.details}, hint=${e.hint}');
@@ -406,84 +439,97 @@ class GroupService {
     }
   }
 
-  /// Helper: Get all pending invites for current user as typed models
+  /// Helper: Cancel or delete an invitation (inviter action)
+  Future<bool> cancelInvite(String inviteId) async {
+    try {
+      debugPrint('🗑️ [GroupService.cancelInvite] Deleting inviteId: $inviteId');
+      await _supabase.from('group_invitations').delete().eq('id', inviteId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ [GroupService.cancelInvite] Error: $e');
+      return false;
+    }
+  }
+
+  /// Helper: Get all pending invites for current user (both received and sent)
   Future<List<GroupInvitationItem>> getPendingInvitesForCurrentUser() async {
     final userId = currentUserId;
-    if (userId == null) return [];
+    if (userId == null) {
+      debugPrint('⚠️ [GroupService.getPendingInvites] currentUserId is null (not logged in)');
+      return [];
+    }
 
     try {
-      final response = await _supabase
+      debugPrint('📩 [GroupService.getPendingInvites] Querying group_invitations for user: $userId (as invitee or inviter)');
+      final invitesData = await _supabase
           .from('group_invitations')
-          .select('''
-            id,
-            group_id,
-            inviter_id,
-            invitee_id,
-            status,
-            created_at,
-            groups (
-              id,
-              name
-            ),
-            inviter:user_profiles!group_invitations_inviter_id_fkey (
-              id,
-              full_name,
-              email
-            )
-          ''')
-          .eq('invitee_id', userId)
-          .eq('status', 'pending')
+          .select('*')
+          .or('invitee_id.eq.$userId,inviter_id.eq.$userId')
+          .ilike('status', 'pending')
           .order('created_at', ascending: false);
 
-      return (response as List)
-          .map((item) => GroupInvitationItem.fromJson(item as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      try {
-        final invitesData = await _supabase
-            .from('group_invitations')
-            .select('id, group_id, inviter_id, invitee_id, status, created_at')
-            .eq('invitee_id', userId)
-            .eq('status', 'pending');
+      debugPrint('📩 [GroupService.getPendingInvites] Raw response rows (${(invitesData as List).length}): $invitesData');
 
-        final List<GroupInvitationItem> result = [];
-        for (final inv in (invitesData as List)) {
-          final gId = inv['group_id'] as String;
-          final inviterId = inv['inviter_id'] as String;
+      final List<GroupInvitationItem> result = [];
+      for (final raw in (invitesData as List)) {
+        final inv = Map<String, dynamic>.from(raw as Map);
+        final gId = inv['group_id']?.toString() ?? '';
+        final inviterId = inv['inviter_id']?.toString() ?? '';
+        final inviteeId = inv['invitee_id']?.toString() ?? '';
 
-          String groupName = 'Group';
-          String inviterName = 'Travel Leader';
+        String groupName = inv['group_name']?.toString() ?? '';
+        String inviterName = inv['inviter_name']?.toString() ?? '';
+        String inviteeName = inv['invitee_name']?.toString() ?? '';
+        String inviteeEmail = inv['invitee_email']?.toString() ?? '';
 
+        // Resolve group name if missing
+        if (groupName.isEmpty && gId.isNotEmpty) {
           try {
             final g = await _supabase.from('groups').select('name').eq('id', gId).maybeSingle();
-            if (g != null && g['name'] != null) groupName = g['name'];
+            if (g != null && g['name'] != null) groupName = g['name'].toString();
           } catch (_) {}
+        }
 
+        // Resolve inviter name if missing
+        if (inviterName.isEmpty && inviterId.isNotEmpty) {
           try {
-            final p = await _supabase.from('user_profiles').select('full_name').eq('id', inviterId).maybeSingle();
-            if (p != null && p['full_name'] != null) {
-              inviterName = p['full_name'];
-            } else {
-              final p2 = await _supabase.from('profiles').select('full_name').eq('id', inviterId).maybeSingle();
-              if (p2 != null && p2['full_name'] != null) inviterName = p2['full_name'];
+            final p = await _supabase.from('user_profiles').select('full_name, email').eq('id', inviterId).maybeSingle();
+            if (p != null) {
+              inviterName = p['full_name']?.toString() ?? p['email']?.toString() ?? '';
             }
           } catch (_) {}
-
-          result.add(GroupInvitationItem(
-            id: inv['id'] as String,
-            groupId: gId,
-            groupName: groupName,
-            inviterId: inviterId,
-            inviterName: inviterName,
-            inviteeId: userId,
-            status: inv['status'] as String? ?? 'pending',
-            createdAt: inv['created_at'] != null ? DateTime.tryParse(inv['created_at']) : null,
-          ));
         }
-        return result;
-      } catch (fallbackErr) {
-        return [];
+
+        // Resolve invitee name / email if missing
+        if ((inviteeName.isEmpty || inviteeEmail.isEmpty) && inviteeId.isNotEmpty) {
+          try {
+            final p = await _supabase.from('user_profiles').select('full_name, email').eq('id', inviteeId).maybeSingle();
+            if (p != null) {
+              if (inviteeName.isEmpty) inviteeName = p['full_name']?.toString() ?? '';
+              if (inviteeEmail.isEmpty) inviteeEmail = p['email']?.toString() ?? '';
+            }
+          } catch (_) {}
+        }
+
+        result.add(GroupInvitationItem(
+          id: inv['id']?.toString() ?? '',
+          groupId: gId,
+          groupName: groupName.isNotEmpty ? groupName : 'Travel Squad',
+          inviterId: inviterId,
+          inviterName: inviterName.isNotEmpty ? inviterName : 'Travel Leader',
+          inviteeId: inviteeId,
+          inviteeName: inviteeName.isNotEmpty ? inviteeName : (inviteeEmail.isNotEmpty ? inviteeEmail : 'Invited Member'),
+          inviteeEmail: inviteeEmail,
+          status: inv['status']?.toString() ?? 'pending',
+          createdAt: inv['created_at'] != null ? DateTime.tryParse(inv['created_at'].toString()) : null,
+        ));
       }
+
+      debugPrint('✅ [GroupService.getPendingInvites] Successfully returned ${result.length} pending invites for user: $userId');
+      return result;
+    } catch (e, stack) {
+      debugPrint('❌ [GroupService.getPendingInvites] Error: $e\n$stack');
+      return [];
     }
   }
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../controllers/cart_controller.dart';
+import '../controllers/group_controller.dart';
 import '../data/mock_city_catalog.dart';
 import '../screens/group_picker_sheet.dart';
 import '../screens/solo_matches_screen.dart';
@@ -22,6 +25,7 @@ class ItineraryCartScreen extends StatefulWidget {
 }
 
 class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
+  late final CartController _cartController;
   late CityCatalog _currentCity;
   bool _loadingInventory = true;
   bool _hasLiveOperatorData = false;
@@ -43,7 +47,25 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   @override
   void initState() {
     super.initState();
+    _cartController = Get.isRegistered<CartController>()
+        ? Get.find<CartController>()
+        : Get.put(CartController());
+
     _currentCity = widget.city;
+
+    // Sync selected items if previously in cart for this city
+    if (_cartController.activeCity.value?.id == widget.city.id) {
+      _selectedIds.addAll(_cartController.selectedItemIds);
+    }
+
+    // Sync active group from GroupController if available
+    if (Get.isRegistered<GroupController>()) {
+      final active = Get.find<GroupController>().activeGroup.value;
+      if (active != null) {
+        _selectedGroup = SelectedGroup(id: active.id, name: active.name, role: 'member');
+      }
+    }
+
     _fetchLiveInventory();
   }
 
@@ -167,6 +189,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
         _endDate = picked;
       }
     });
+    _cartController.updateDates(_startDate, _endDate);
   }
 
   Future<void> _onPrimaryCta() async {
@@ -1310,6 +1333,8 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
                           _selectedIds.add(item.id);
                         }
                       });
+                      _cartController.setItems(_selectedIds);
+                      _cartController.updateBudget(_estimated.toInt());
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(

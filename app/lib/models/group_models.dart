@@ -136,6 +136,8 @@ class GroupInvitationItem {
   final String inviterId;
   final String inviterName;
   final String inviteeId;
+  final String inviteeName;
+  final String inviteeEmail;
   final String status; // 'pending', 'accepted', 'rejected'
   final DateTime? createdAt;
 
@@ -146,9 +148,25 @@ class GroupInvitationItem {
     required this.inviterId,
     required this.inviterName,
     required this.inviteeId,
+    this.inviteeName = '',
+    this.inviteeEmail = '',
     required this.status,
     this.createdAt,
   });
+
+  bool isIncoming(String? currentUserId) {
+    if (currentUserId == null || currentUserId.trim().isEmpty) return false;
+    final cId = currentUserId.trim().toLowerCase();
+    final eId = inviteeId.trim().toLowerCase();
+    return eId.isNotEmpty && eId == cId;
+  }
+
+  bool isOutgoing(String? currentUserId) {
+    if (currentUserId == null || currentUserId.trim().isEmpty) return false;
+    final cId = currentUserId.trim().toLowerCase();
+    final iId = inviterId.trim().toLowerCase();
+    return iId.isNotEmpty && iId == cId;
+  }
 
   factory GroupInvitationItem.fromJson(Map<String, dynamic> json) {
     final group = json['groups'] as Map<String, dynamic>? ?? {};
@@ -158,17 +176,23 @@ class GroupInvitationItem {
         {};
 
     return GroupInvitationItem(
-      id: json['id'] as String? ?? '',
-      groupId: json['group_id'] as String? ?? '',
-      groupName: group['name'] as String? ?? 'Unknown Group',
-      inviterId: json['inviter_id'] as String? ?? '',
-      inviterName: inviter['full_name'] as String? ??
-          inviter['name'] as String? ??
+      id: json['id']?.toString() ?? '',
+      groupId: json['group_id']?.toString() ?? '',
+      groupName: json['group_name']?.toString() ??
+          group['name']?.toString() ??
+          'Unknown Squad',
+      inviterId: json['inviter_id']?.toString() ?? '',
+      inviterName: json['inviter_name']?.toString() ??
+          inviter['full_name']?.toString() ??
+          inviter['name']?.toString() ??
           'Group Leader',
-      inviteeId: json['invitee_id'] as String? ??
-          json['solo_user_id'] as String? ??
+      inviteeId: json['invitee_id']?.toString() ??
+          json['solo_user_id']?.toString() ??
+          json['user_id']?.toString() ??
           '',
-      status: json['status'] as String? ?? 'pending',
+      inviteeName: json['invitee_name']?.toString() ?? '',
+      inviteeEmail: json['invitee_email']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pending',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -183,6 +207,8 @@ class GroupInvitationItem {
       'inviter_id': inviterId,
       'inviter_name': inviterName,
       'invitee_id': inviteeId,
+      'invitee_name': inviteeName,
+      'invitee_email': inviteeEmail,
       'status': status,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
     };

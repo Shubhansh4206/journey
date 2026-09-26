@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../controllers/group_controller.dart';
 import '../models/group_models.dart';
 import '../services/group_service.dart';
+
+enum InviteTabFilter { all, received, sent }
 
 /// A self-contained, drop-in tray widget for displaying and responding to pending group invitations.
 class PendingInvitesTray extends StatefulWidget {
@@ -29,6 +34,7 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
   final GroupService _groupService = GroupService();
   late Future<List<GroupInvitationItem>> _invitesFuture;
   final Set<String> _processingIds = {};
+  InviteTabFilter _currentFilter = InviteTabFilter.all;
 
   @override
   void initState() {
@@ -72,6 +78,11 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
         );
 
         if (accept) {
+          try {
+            if (Get.isRegistered<GroupController>()) {
+              Get.find<GroupController>().fetchUserGroups();
+            }
+          } catch (_) {}
           widget.onInviteAccepted?.call(invite);
         } else {
           widget.onInviteRejected?.call(invite);
@@ -79,7 +90,6 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
         widget.onInvitesChanged?.call();
       }
 
-      // Refresh list after processing
       _fetchInvites();
     } catch (e) {
       if (mounted) {
@@ -100,8 +110,57 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
     }
   }
 
+  Future<void> _handleCancelInvite(GroupInvitationItem invite) async {
+    setState(() {
+      _processingIds.add(invite.id);
+    });
+
+    try {
+      final success = await _groupService.cancelInvite(invite.id);
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cancelled invitation to ${invite.inviteeName.isNotEmpty ? invite.inviteeName : "user"}.'),
+              backgroundColor: Colors.blueGrey.shade800,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          widget.onInvitesChanged?.call();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to cancel invitation.'),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+      _fetchInvites();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processingIds.remove(invite.id);
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentUserId = _groupService.currentUserId ?? Supabase.instance.client.auth.currentUser?.id;
+
     return FutureBuilder<List<GroupInvitationItem>>(
       future: _invitesFuture,
       builder: (context, snapshot) {
@@ -139,68 +198,170 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
           );
         }
 
-        final invites = snapshot.data ?? [];
+        final allInvites = snapshot.data ?? [];
+        final receivedInvites = allInvites.where((i) => !i.isOutgoing(currentUserId)).toList();
+        final sentInvites = allInvites.where((i) => i.isOutgoing(currentUserId)).toList();
 
-        if (invites.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.indigo.withValues(alpha: 0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.mail_outline_rounded, size: 36, color: Colors.indigo),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'No Pending Invitations',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'When a group leader invites you to travel, it will show up here.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            ),
-          );
+        List<GroupInvitationItem> displayedInvites;
+        if (_currentFilter == InviteTabFilter.received) {
+          displayedInvites = receivedInvites;
+        } else if (_currentFilter == InviteTabFilter.sent) {
+          displayedInvites = sentInvites;
+        } else {
+          displayedInvites = allInvites;
         }
 
         return RefreshIndicator(
           onRefresh: () async => _fetchInvites(),
-          child: ListView.separated(
-            padding: widget.padding,
-            shrinkWrap: widget.shrinkWrap,
-            physics: widget.physics ?? const AlwaysScrollableScrollPhysics(),
-            itemCount: invites.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final invite = invites[index];
-              final isProcessing = _processingIds.contains(invite.id);
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Filter tabs if there are both received and sent
+              if (allInvites.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Row(
+                    children: [
+                      _buildFilterChip(
+                        label: 'All (${allInvites.length})',
+                        filter: InviteTabFilter.all,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
+                        label: 'Received (${receivedInvites.length})',
+                        filter: InviteTabFilter.received,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
+                        label: 'Sent (${sentInvites.length})',
+                        filter: InviteTabFilter.sent,
+                      ),
+                    ],
+                  ),
+                ),
 
-              return _buildInviteCard(invite, isProcessing);
-            },
+              if (displayedInvites.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.indigo.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.mail_outline_rounded, size: 36, color: Colors.indigo),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _currentFilter == InviteTabFilter.received
+                                ? 'No Received Invitations'
+                                : _currentFilter == InviteTabFilter.sent
+                                    ? 'No Sent Invitations'
+                                    : 'No Pending Invitations',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'When a leader invites you or you invite someone, requests appear here.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _fetchInvites,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Refresh'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.separated(
+                    padding: widget.padding,
+                    shrinkWrap: widget.shrinkWrap,
+                    physics: widget.physics ?? const AlwaysScrollableScrollPhysics(),
+                    itemCount: displayedInvites.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final invite = displayedInvites[index];
+                      final isProcessing = _processingIds.contains(invite.id);
+                      final isOutgoing = invite.isOutgoing(currentUserId);
+                      final isIncoming = !isOutgoing;
+
+                      debugPrint('📨 [PendingInvitesTray] item: "${invite.groupName}" | inviter: "${invite.inviterName}" (${invite.inviterId}) | invitee: "${invite.inviteeName}" (${invite.inviteeId}) | currentUserId: "$currentUserId" | isIncoming: $isIncoming, isOutgoing: $isOutgoing');
+
+                      return _buildInviteCard(
+                        invite: invite,
+                        isIncoming: isIncoming,
+                        isProcessing: isProcessing,
+                      );
+                    },
+                  ),
+                ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildInviteCard(GroupInvitationItem invite, bool isProcessing) {
-    final inviterInitial = invite.inviterName.isNotEmpty
-        ? invite.inviterName[0].toUpperCase()
-        : 'G';
+  Widget _buildFilterChip({
+    required String label,
+    required InviteTabFilter filter,
+  }) {
+    final isSelected = _currentFilter == filter;
+    return GestureDetector(
+      onTap: () => setState(() => _currentFilter = filter),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.indigo : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? Colors.indigo : Colors.grey.shade300,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.indigo.withValues(alpha: 0.25),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInviteCard({
+    required GroupInvitationItem invite,
+    required bool isIncoming,
+    required bool isProcessing,
+  }) {
+    final avatarName = isIncoming ? invite.inviterName : invite.inviteeName;
+    final initial = avatarName.isNotEmpty ? avatarName[0].toUpperCase() : 'U';
 
     return Card(
       elevation: 2,
@@ -219,11 +380,11 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: Colors.indigo.shade100,
+                  backgroundColor: isIncoming ? Colors.indigo.shade100 : Colors.amber.shade100,
                   child: Text(
-                    inviterInitial,
+                    initial,
                     style: TextStyle(
-                      color: Colors.indigo.shade800,
+                      color: isIncoming ? Colors.indigo.shade800 : Colors.amber.shade900,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -234,6 +395,23 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (!isIncoming)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Sent by you · Pending',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade900,
+                            ),
+                          ),
+                        ),
                       RichText(
                         text: TextSpan(
                           style: const TextStyle(
@@ -241,20 +419,36 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
                             color: Color(0xFF1E293B),
                             height: 1.35,
                           ),
-                          children: [
-                            TextSpan(
-                              text: invite.inviterName,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const TextSpan(text: ' invited you to join '),
-                            TextSpan(
-                              text: invite.groupName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.indigo,
-                              ),
-                            ),
-                          ],
+                          children: isIncoming
+                              ? [
+                                  TextSpan(
+                                    text: invite.inviterName.isNotEmpty ? invite.inviterName : 'A leader',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  const TextSpan(text: ' invited you to join '),
+                                  TextSpan(
+                                    text: invite.groupName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.indigo,
+                                    ),
+                                  ),
+                                ]
+                              : [
+                                  const TextSpan(text: 'You invited '),
+                                  TextSpan(
+                                    text: invite.inviteeName.isNotEmpty ? invite.inviteeName : (invite.inviteeEmail.isNotEmpty ? invite.inviteeEmail : 'a member'),
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  const TextSpan(text: ' to join '),
+                                  TextSpan(
+                                    text: invite.groupName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.indigo,
+                                    ),
+                                  ),
+                                ],
                         ),
                       ),
                       if (invite.createdAt != null) ...[
@@ -284,7 +478,7 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
                   ),
                 ),
               )
-            else
+            else if (isIncoming)
               Row(
                 children: [
                   Expanded(
@@ -321,6 +515,25 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
                         'Accept',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _handleCancelInvite(invite),
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text('Cancel Invite'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                      side: BorderSide(color: Colors.red.shade200),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     ),
                   ),
                 ],
