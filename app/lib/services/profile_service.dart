@@ -11,7 +11,7 @@ class ProfileService {
       // 1. Try 'profiles' table first
       try {
         final data = await _client
-            .from('profiles')
+            .from('user_profiles')
             .select()
             .eq('id', userId)
             .maybeSingle();
@@ -48,29 +48,21 @@ class ProfileService {
     final payload = profile.toJson();
     payload['updated_at'] = DateTime.now().toIso8601String();
 
-    bool saved = false;
-
-    // Try 'profiles' table
-    try {
-      await _client.from('profiles').upsert(payload);
-      saved = true;
-    } catch (e) {
-      debugPrint('Notice: Could not upsert to profiles table: $e');
+    for (final table in ['user_profiles', 'profiles', 'users']) {
+      try {
+        await _client.from(table).upsert(payload);
+        return true;
+      } catch (e) {
+        final err = e.toString();
+        if (err.contains('PGRST205') || err.contains('42P01') || err.contains('not find the table')) {
+          continue;
+        }
+        debugPrint('Notice on saving to $table: $e');
+      }
     }
 
-    // Try 'users' table
-    try {
-      await _client.from('users').upsert(payload);
-      saved = true;
-    } catch (e) {
-      debugPrint('Notice: Could not upsert to users table: $e');
-    }
-
-    if (!saved) {
-      debugPrint('Warning: Failed to save profile to both tables. Check Supabase RLS policies.');
-    }
-
-    return saved;
+    debugPrint('Warning: Failed to save profile. Check Supabase RLS policies.');
+    return false;
   }
 
   /// Check if the user has already completed onboarding

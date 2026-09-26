@@ -21,61 +21,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   final List<Map<String, dynamic>> _vibeCategories = [
-    {'name': 'All', 'icon': Icons.border_all_rounded},
-    {'name': 'Mountains', 'icon': Icons.landscape_rounded},
-    {'name': 'Beaches', 'icon': Icons.beach_access_rounded},
-    {'name': 'Heritage', 'icon': Icons.fort_rounded},
-    {'name': 'Wellness', 'icon': Icons.spa_rounded},
-  ];
-
-  // Explore Data: Long Weekends
-  static const List<Map<String, dynamic>> _longWeekends = [
-    {
-      'name': 'Gandhi Jayanti Escape',
-      'dates': 'Oct 2 - Oct 4',
-      'squadsCount': 14,
-      'imageUrl':
-          'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      'name': 'Dussehra Mega-Break',
-      'dates': 'Oct 18 - Oct 20',
-      'squadsCount': 28,
-      'imageUrl':
-          'https://images.unsplash.com/photo-1605335198032-475271cf5a88?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      'name': 'Diwali Advance Booking',
-      'dates': 'Nov 8 - Nov 12',
-      'squadsCount': 45,
-      'imageUrl':
-          'https://images.unsplash.com/photo-1605649487212-47bdab064df8?auto=format&fit=crop&w=800&q=80',
-    },
-  ];
-
-  // Explore Data: Top Operators
-  static const List<Map<String, dynamic>> _operators = [
-    {
-      'name': 'Royal Rajputana Expeditions',
-      'rating': '4.9',
-      'trips': '120+ trips completed',
-      'tag': 'Heritage & Luxury',
-      'icon': Icons.verified_rounded,
-    },
-    {
-      'name': 'Goan Coastal Tours',
-      'rating': '4.8',
-      'trips': '95+ trips completed',
-      'tag': 'Water Sports & Beach',
-      'icon': Icons.surfing_rounded,
-    },
-    {
-      'name': 'Himalayan Heights',
-      'rating': '5.0',
-      'trips': '150+ trips completed',
-      'tag': 'Trekking & Adventure',
-      'icon': Icons.hiking_rounded,
-    },
+    {'name': 'All', 'icon': Icons.explore_outlined},
+    {'name': 'Mountains', 'icon': Icons.landscape_outlined},
+    {'name': 'Beaches', 'icon': Icons.beach_access_outlined},
+    {'name': 'Heritage', 'icon': Icons.castle_outlined},
+    {'name': 'Wellness', 'icon': Icons.spa_outlined},
   ];
 
   @override
@@ -93,8 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!matchesSearch) return false;
 
       if (_selectedCategory == 'All') return true;
-      if (_selectedCategory == 'Mountains') {
-        return city.id == 'manali' || city.id == 'rishikesh';
+      if (_selectedCategory == 'Coastal') {
+        return city.id == 'mumbai' || city.id == 'goa';
       }
       if (_selectedCategory == 'Beaches') {
         return city.id == 'goa';
@@ -102,8 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedCategory == 'Heritage') {
         return city.id == 'jaipur' || city.id == 'udaipur';
       }
-      if (_selectedCategory == 'Wellness') {
-        return city.id == 'rishikesh' || city.id == 'udaipur';
+      if (_selectedCategory == 'Lakes') {
+        return city.id == 'udaipur';
       }
       return true;
     }).toList();
@@ -130,16 +80,16 @@ class _HomeScreenState extends State<HomeScreen> {
         'Explorer';
 
     return Scaffold(
-      backgroundColor: AppColors.offWhite,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Clean App Bar Header
-            SliverToBoxAdapter(child: _buildCleanHeader(userName)),
+            // Upgraded App Bar
+            SliverToBoxAdapter(child: _buildUpgradedHeader(userName)),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-            // Travel Mode Toggle
+            // Core Travel Mode Toggle
             SliverToBoxAdapter(
               child: TravelModeToggle(
                 isSolo: _isSolo,
@@ -148,29 +98,61 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-            // Clean Mode Banner
-            SliverToBoxAdapter(child: _buildCleanModeBanner()),
+            // Mode Explanation Card
+            SliverToBoxAdapter(child: _buildModeBanner()),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
             // Destination Search Bar
             SliverToBoxAdapter(child: _buildSearchBar()),
             const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-            // Clean Category Pills
-            SliverToBoxAdapter(child: _buildCategoryPills()),
+            // Vibe Category Filters
+            SliverToBoxAdapter(child: _buildVibeCategories()),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-            // Destinations Section Title
+            // Destinations Header
             SliverToBoxAdapter(
-              child: _buildSectionHeader(
-                'Destinations',
-                'Select a city to start building your custom itinerary cart',
-                countText: '${_filteredCities.length} Available',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Featured Destinations',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkCharcoal,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFC8019).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${_filteredCities.length} Cities',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFFC8019),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-            // Destinations List
+            // Destinations List / Grid
             _filteredCities.isEmpty
                 ? SliverToBoxAdapter(child: _buildEmptyState())
                 : SliverPadding(
@@ -181,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final city = _filteredCities[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16),
-                            child: _buildDestinationCard(city),
+                            child: _buildDestinationExploreCard(city),
                           );
                         },
                         childCount: _filteredCities.length,
@@ -189,32 +171,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // Explore Section 1: Upcoming Long Weekends
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(
-                'Upcoming Long Weekends',
-                'Pre-built squads filling fast for upcoming holidays',
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(child: _buildLongWeekendsSection()),
+            // Explore Section 1: Top Trending Experiences Carousel
+            SliverToBoxAdapter(child: _buildTrendingExperiences()),
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-            // Explore Section 2: Top Verified Operators
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(
-                'Top Operators This Month',
-                'Highest rated local partners for custom packages',
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(child: _buildTopOperatorsSection()),
+            // Explore Section 2: Curated Trip Packages Showcase
+            SliverToBoxAdapter(child: _buildCuratedPackagesSection()),
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-            // Explore Section 3: Trust & Service Guarantee
-            SliverToBoxAdapter(child: _buildTrustSection()),
+            // Explore Section 3: Trust & Guarantee Banner
+            SliverToBoxAdapter(child: _buildTrustFooterBanner()),
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
           ],
         ),
@@ -222,13 +190,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Clean App Bar Header ──────────────────────────────────────────────────
-  Widget _buildCleanHeader(String userName) {
+  // ── Upgraded Header ───────────────────────────────────────────────────────
+  Widget _buildUpgradedHeader(String userName) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 14),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -238,24 +206,24 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Location Pill
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F4FF),
+                  color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.near_me_outlined,
-                        color: AppColors.primary, size: 14),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.location_on,
+                        color: Color(0xFFFC8019), size: 14),
+                    const SizedBox(width: 4),
                     Text(
                       'New Delhi, IN',
                       style: GoogleFonts.poppins(
@@ -264,39 +232,44 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.darkCharcoal,
                       ),
                     ),
-                    const SizedBox(width: 4),
                     const Icon(Icons.keyboard_arrow_down,
                         color: AppColors.textMuted, size: 14),
                   ],
                 ),
               ),
-              Stack(
+              Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: AppColors.darkCharcoal,
-                      size: 24,
-                    ),
-                    onPressed: () => context.push('/invites'),
-                  ),
-                  Positioned(
-                    right: 12,
-                    top: 12,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: AppColors.danger,
-                        shape: BoxShape.circle,
+                  Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          color: AppColors.darkCharcoal,
+                          size: 24,
+                        ),
+                        onPressed: () => context.push('/invites'),
                       ),
-                    ),
+                      Positioned(
+                        right: 10,
+                        top: 10,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF0052),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+
+          // User Greeting & Avatar
           Row(
             children: [
               GestureDetector(
@@ -309,12 +282,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.primary, width: 2),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFC8019),
                         shape: BoxShape.circle,
                       ),
                       child: const CircleAvatar(
-                        radius: 20,
+                        radius: 22,
                         backgroundColor: AppColors.primaryLight,
                         backgroundImage:
                             NetworkImage('https://i.pravatar.cc/150?img=11'),
@@ -326,33 +299,39 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(2),
                         decoration: const BoxDecoration(
-                          color: AppColors.success,
+                          color: Color(0xFF60B246),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.check,
                           color: Colors.white,
-                          size: 8,
+                          size: 9,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Welcome back, $userName',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkCharcoal,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Hey, $userName',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.darkCharcoal,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text('👋', style: TextStyle(fontSize: 18)),
+                    ],
                   ),
                   Text(
-                    'Where are you planning your next journey?',
+                    'Where are we traveling next?',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -367,33 +346,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Clean Mode Banner ─────────────────────────────────────────────────────
-  Widget _buildCleanModeBanner() {
+  // ── Mode Explanation Card ─────────────────────────────────────────────────
+  Widget _buildModeBanner() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        color: _isSolo ? const Color(0xFFFFF0F5) : const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _isSolo ? const Color(0xFFFFCCE1) : const Color(0xFFBFDBFE),
+        ),
       ),
       child: Row(
         children: [
           Icon(
-            _isSolo ? Icons.person_search_outlined : Icons.groups_outlined,
-            color: AppColors.primary,
+            _isSolo ? Icons.person_pin_circle : Icons.groups_rounded,
+            color: _isSolo ? AppColors.punchPink : AppColors.electricBlue,
             size: 20,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               _isSolo
-                  ? 'Solo Mode: Build a custom itinerary cart and match with open travel squads.'
-                  : 'Squad Mode: Build a custom itinerary cart and receive tailored operator quotes.',
+                  ? 'Solo Mode: Build your itinerary cart and match with open travel squads!'
+                  : 'Squad Mode: Custom-build trip details and get quotes from verified local operators.',
               style: GoogleFonts.poppins(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkCharcoal,
               ),
             ),
           ),
@@ -409,48 +390,62 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: TextField(
           controller: _searchController,
           onChanged: (val) =>
               setState(() => _searchQuery = val.trim().toLowerCase()),
           style: GoogleFonts.poppins(
-            fontSize: 13.5,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: AppColors.darkCharcoal,
           ),
           decoration: InputDecoration(
-            hintText: 'Search destinations (e.g., Manali, Goa, Jaipur)...',
+            hintText: 'Search destinations (e.g. Manali, Goa, Jaipur)...',
             hintStyle:
                 GoogleFonts.poppins(fontSize: 13, color: AppColors.textMuted),
             prefixIcon:
-                const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
+                const Icon(Icons.search, color: Color(0xFFFC8019), size: 22),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    icon: const Icon(Icons.clear, size: 18),
                     onPressed: () {
                       _searchController.clear();
                       setState(() => _searchQuery = '');
                     },
                   )
-                : const Icon(
-                    Icons.tune_rounded,
-                    color: AppColors.textMuted,
-                    size: 18,
+                : Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFC8019).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      color: Color(0xFFFC8019),
+                      size: 16,
+                    ),
                   ),
             border: InputBorder.none,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ),
     );
   }
 
-  // ── Category Pills ────────────────────────────────────────────────────────
-  Widget _buildCategoryPills() {
+  // ── Vibe Category Filters ─────────────────────────────────────────────────
+  Widget _buildVibeCategories() {
     return SizedBox(
       height: 38,
       child: ListView.separated(
@@ -471,18 +466,31 @@ class _HomeScreenState extends State<HomeScreen> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.darkCharcoal : Colors.white,
+                color: isSelected ? const Color(0xFF1E2430) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isSelected ? AppColors.darkCharcoal : AppColors.border,
+                  color: isSelected
+                      ? const Color(0xFF1E2430)
+                      : const Color(0xFFE2E8F0),
                 ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        )
+                      ]
+                    : [],
               ),
               child: Row(
                 children: [
                   Icon(
                     icon,
                     size: 15,
-                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    color: isSelected
+                        ? const Color(0xFFFC8019)
+                        : AppColors.textSecondary,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -503,71 +511,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Clean Section Header ──────────────────────────────────────────────────
-  Widget _buildSectionHeader(String title, String subtitle, {String? countText}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkCharcoal,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (countText != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                countText,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ── Clean Destination Card ────────────────────────────────────────────────
-  Widget _buildDestinationCard(CityCatalog city) {
+  // ── Destination Full Explore Card ─────────────────────────────────────────
+  Widget _buildDestinationExploreCard(CityCatalog city) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -575,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Banner Image & Floating Information Badges
+          // Banner Image & Badges
           Stack(
             children: [
               SizedBox(
@@ -586,8 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: city.accent.withValues(alpha: 0.2),
-                    child: Icon(Icons.landscape_rounded,
-                        size: 48, color: city.accent),
+                    child: Icon(Icons.landscape, size: 48, color: city.accent),
                   ),
                 ),
               ),
@@ -599,7 +552,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.7),
+                      Colors.black.withValues(alpha: 0.75),
                     ],
                   ),
                 ),
@@ -611,17 +564,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.success,
-                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0xFF60B246),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star_rounded,
-                          color: Colors.white, size: 12),
+                      const Icon(Icons.star, color: Colors.white, size: 12),
                       const SizedBox(width: 3),
                       Text(
-                        '4.9 Rating',
+                        '4.9 (1.2k+)',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -640,10 +592,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '${city.hotels.length + city.activities.length + city.places.length} Catalog Items',
+                    '${city.hotels.length + city.activities.length + city.places.length} Experiences',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 10,
@@ -680,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
 
-          // Bottom Action Bar
+          // Action & Info Row
           Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -690,7 +642,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ESTIMATED BUDGET',
+                      'ESTIMATED AVG BUDGET',
                       style: GoogleFonts.poppins(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
@@ -711,13 +663,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () => _openCart(city),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: const Color(0xFFFC8019),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 0,
+                    elevation: 2,
                   ),
                   child: Row(
                     children: [
@@ -743,171 +695,157 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Explore Section 1: Upcoming Long Weekends ────────────────────────────
-  Widget _buildLongWeekendsSection() {
-    return SizedBox(
-      height: 155,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        scrollDirection: Axis.horizontal,
-        itemCount: _longWeekends.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final item = _longWeekends[index];
-          final name = item['name'] as String;
-          final dates = item['dates'] as String;
-          final squadsCount = item['squadsCount'] as int;
-          final imageUrl = item['imageUrl'] as String;
+  // ── Explore Section 1: Trending Experiences ───────────────────────────────
+  Widget _buildTrendingExperiences() {
+    final experiences = [
+      {
+        'title': 'Marine Drive Sunset Cruise',
+        'city': 'Mumbai',
+        'price': '₹2,200',
+        'icon': Icons.directions_boat,
+        'color': const Color(0xFF2373F4),
+        'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
+      },
+      {
+        'title': 'Sunset Mandovi Cruise',
+        'city': 'Goa',
+        'price': '₹1,800',
+        'icon': Icons.directions_boat,
+        'color': const Color(0xFFFF0052),
+        'cityObj': mockCities.firstWhere((c) => c.id == 'goa'),
+      },
+      {
+        'title': 'Sunrise Hot Air Balloon',
+        'city': 'Jaipur',
+        'price': '₹8,500',
+        'icon': Icons.air,
+        'color': const Color(0xFF9564DD),
+        'cityObj': mockCities.firstWhere((c) => c.id == 'jaipur'),
+      },
+      {
+        'title': 'Lake Pichola Sunset Boat',
+        'city': 'Udaipur',
+        'price': '₹1,200',
+        'icon': Icons.sailing,
+        'color': const Color(0xFF10B981),
+        'cityObj': mockCities.firstWhere((c) => c.id == 'udaipur'),
+      },
+    ];
 
-          return Container(
-            width: 240,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: AppColors.primaryLight,
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '🔥 Top Must-Do Experiences',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkCharcoal,
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.2),
-                        Colors.black.withValues(alpha: 0.8),
-                      ],
-                    ),
-                  ),
+              ),
+              Text(
+                'Swipe right →',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w500,
                 ),
-                Padding(
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 125,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            scrollDirection: Axis.horizontal,
+            itemCount: experiences.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final exp = experiences[index];
+              final title = exp['title'] as String;
+              final cityName = exp['city'] as String;
+              final price = exp['price'] as String;
+              final icon = exp['icon'] as IconData;
+              final color = exp['color'] as Color;
+              final cityObj = exp['cityObj'] as CityCatalog;
+
+              return InkWell(
+                onTap: () => _openCart(cityObj),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 190,
                   padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(icon, color: color, size: 20),
                           ),
-                          child: Text(
-                            '$squadsCount Squads Active',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkCharcoal,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              cityName,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            name,
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.poppins(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            dates,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ── Explore Section 2: Top Operators ──────────────────────────────────────
-  Widget _buildTopOperatorsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: _operators.map((op) {
-          final name = op['name'] as String;
-          final rating = op['rating'] as String;
-          final trips = op['trips'] as String;
-          final tag = op['tag'] as String;
-          final icon = op['icon'] as IconData;
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: AppColors.primary, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkCharcoal,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded,
-                              size: 14, color: Color(0xFFFFB300)),
-                          const SizedBox(width: 2),
-                          Text(
-                            rating,
-                            style: GoogleFonts.poppins(
-                              fontSize: 11.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: AppColors.darkCharcoal,
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Text(
-                            '•  $trips',
+                            price,
                             style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF60B246),
                             ),
                           ),
                         ],
@@ -915,66 +853,159 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.scaffoldBackground,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    tag,
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  // ── Explore Section 3: Trust Section ──────────────────────────────────────
-  Widget _buildTrustSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.darkCharcoal,
-        borderRadius: BorderRadius.circular(16),
-      ),
+  // ── Explore Section 2: Curated Trip Packages ──────────────────────────────
+  Widget _buildCuratedPackagesSection() {
+    final packages = [
+      {
+        'title': 'Mumbai Coastal & Bollywood Vibes',
+        'days': '3 Days / 2 Nights',
+        'vibe': '🌆 Urban & Coastal',
+        'badge': 'BESTSELLER',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
+      },
+      {
+        'title': 'Goa Sunsets, Beaches & Shacks',
+        'days': '5 Days / 4 Nights',
+        'vibe': '🏖️ Beach Party',
+        'badge': 'POPULAR',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'goa'),
+      },
+      {
+        'title': 'Jaipur Royal Palaces & Bazaars',
+        'days': '3 Days / 2 Nights',
+        'vibe': '🏰 Royal Heritage',
+        'badge': 'FEATURED',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'jaipur'),
+      },
+      {
+        'title': 'Udaipur Royal Lakes & Sunsets',
+        'days': '4 Days / 3 Nights',
+        'vibe': '⛵ Romantic Lakes',
+        'badge': 'EXCLUSIVE',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'udaipur'),
+      },
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Verified Service Guarantee',
+            '🎒 Curated Squad & Solo Packages',
             style: GoogleFonts.poppins(
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.darkCharcoal,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'All local tour operators and stay providers are manually vetted for quality and safety compliance.',
-            style: GoogleFonts.poppins(
-              fontSize: 11.5,
-              color: Colors.white70,
-            ),
+          const SizedBox(height: 12),
+          ...packages.map((pkg) {
+            final cityObj = pkg['cityObj'] as CityCatalog;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                title: Text(
+                  pkg['title'] as String,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkCharcoal,
+                  ),
+                ),
+                subtitle: Text(
+                  '${pkg['days']} • ${pkg['vibe']}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                trailing: ElevatedButton(
+                  onPressed: () => _openCart(cityObj),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFF3EB),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Explore',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFFFC8019),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ── Explore Section 3: Trust Footer Banner ────────────────────────────────
+  Widget _buildTrustFooterBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E2430),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.verified_user_outlined,
+                  color: Color(0xFFFC8019), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'WHY PLAN WITH JOURNEY?',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              _trustFeaturePill(Icons.bolt_outlined, '24h Quotes'),
-              const SizedBox(width: 8),
-              _trustFeaturePill(Icons.groups_outlined, 'Squad Pricing'),
-              const SizedBox(width: 8),
-              _trustFeaturePill(Icons.verified_outlined, 'Verified Guides'),
+              Expanded(
+                child: _trustFeatureTile(
+                    Icons.bolt, 'Fast Quotes', 'Within 24h'),
+              ),
+              Expanded(
+                child: _trustFeatureTile(
+                    Icons.group_work, 'Squad Match', 'Per person budget'),
+              ),
+              Expanded(
+                child: _trustFeatureTile(
+                    Icons.shield, '100% Verified', 'Local operators'),
+              ),
             ],
           ),
         ],
@@ -982,33 +1013,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _trustFeaturePill(IconData icon, String text) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+  Widget _trustFeatureTile(IconData icon, String title, String sub) {
+    return Column(
+      children: [
+        Icon(icon, color: const Color(0xFFFC8019), size: 20),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 14),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                text,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          sub,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 9,
+            color: Colors.white60,
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -1022,9 +1048,9 @@ class _HomeScreenState extends State<HomeScreen> {
               size: 48, color: AppColors.textMuted),
           const SizedBox(height: 12),
           Text(
-            'No matching destinations found',
+            'No matching destinations',
             style: GoogleFonts.poppins(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.darkCharcoal,
             ),
