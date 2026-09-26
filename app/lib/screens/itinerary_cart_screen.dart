@@ -218,34 +218,38 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
   Future<void> _onPrimaryCta() async {
     if (!_canContinue) return;
+
     if (widget.isSolo) {
       // Auto-record post-it draft for AI aggregation
       AiCommunityService().saveTripPostIt(_draft());
 
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SoloMatchesScreen(draft: _draft()),
+        ),
+      );
+      return;
+    } else {
+      SelectedGroup? group = _selectedGroup;
+      if (Get.isRegistered<GroupController>()) {
+        group ??= Get.find<GroupController>().selectedGroup.value;
+      }
+
+      group ??= await showModalBottomSheet<SelectedGroup>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => const GroupPickerSheet(),
+      );
+
+      if (group == null) return;
       setState(() {
-        _selectedGroup = null;
+        _selectedGroup = group;
         _showSummary = true;
       });
-      return;
     }
-
-    SelectedGroup? group = _selectedGroup;
-    if (Get.isRegistered<GroupController>()) {
-      group ??= Get.find<GroupController>().selectedGroup.value;
-    }
-
-    group ??= await showModalBottomSheet<SelectedGroup>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const GroupPickerSheet(),
-    );
-
-    if (group == null) return;
-    setState(() {
-      _selectedGroup = group;
-      _showSummary = true;
-    });
   }
 
   Future<void> _submit() async {
