@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,12 +15,85 @@ class GroupController extends GetxController {
   final RxInt pendingInvitesCount = 0.obs;
   final RxBool isLoading = false.obs;
 
+  RealtimeChannel? _realtimeChannel;
+  StreamSubscription<AuthState>? _authSubscription;
+
   String? get currentUserId => Supabase.instance.client.auth.currentUser?.id;
 
   @override
   void onInit() {
     super.onInit();
     refreshAll();
+    _setupRealtimeSubscription();
+
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.session != null) {
+        refreshAll();
+        _setupRealtimeSubscription();
+      } else {
+        _teardownRealtimeSubscription();
+        userGroups.clear();
+        selectedGroup.value = null;
+        pendingInvitesCount.value = 0;
+      }
+    });
+  }
+
+  void _setupRealtimeSubscription() {
+    _teardownRealtimeSubscription();
+
+    try {
+      final client = Supabase.instance.client;
+      _realtimeChannel = client
+          .channel('public:groups_and_invites_realtime')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'group_invitations',
+            callback: (payload) {
+              debugPrint('⚡ [GroupController Realtime] group_invitations change: ${payload.eventType}');
+              fetchPendingInvitesCount();
+              fetchUserGroups();
+            },
+          )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'group_members',
+            callback: (payload) {
+              debugPrint('⚡ [GroupController Realtime] group_members change: ${payload.eventType}');
+              fetchUserGroups();
+            },
+          )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'groups',
+            callback: (payload) {
+              debugPrint('⚡ [GroupController Realtime] groups change: ${payload.eventType}');
+              fetchUserGroups();
+            },
+          )
+          .subscribe();
+      debugPrint('🛰️ [GroupController] Subscribed to Supabase Realtime channel');
+    } catch (e) {
+      debugPrint('⚠️ [GroupController] Failed to setup realtime subscription: $e');
+    }
+  }
+
+  void _teardownRealtimeSubscription() {
+    if (_realtimeChannel != null) {
+      Supabase.instance.client.removeChannel(_realtimeChannel!);
+      _realtimeChannel = null;
+    }
+  }
+
+  @override
+  void onClose() {
+    _authSubscription?.cancel();
+    _teardownRealtimeSubscription();
+    super.onClose();
   }
 
   Future<void> refreshAll() async {

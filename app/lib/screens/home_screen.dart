@@ -117,6 +117,147 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _showCartSheet() {
+    final count = _cartController.itemCount;
+    final activeCity = _cartController.activeCity.value;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFFFC8019), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your Itinerary Cart',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkCharcoal,
+                          ),
+                        ),
+                        Text(
+                          count > 0 ? '$count item(s) selected for ${activeCity?.name ?? "trip"}' : 'No items added yet',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (count > 0)
+                    TextButton(
+                      onPressed: () {
+                        _cartController.clearCart();
+                        Navigator.pop(ctx);
+                        setState(() {});
+                      },
+                      child: Text('Clear', style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+              if (count > 0 && activeCity != null) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Active Destination', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                    Text(activeCity.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.darkCharcoal)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Progress', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                    Text(_cartController.progressStatusText, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFFC8019))),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _openCart(activeCity);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFC8019),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: Text('Resume & Edit Itinerary', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'Select a destination below to start picking stays, thrills, and sightseeing spots:',
+                  style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: mockCities.map((city) {
+                    return ActionChip(
+                      avatar: const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFFFC8019)),
+                      label: Text(city.name, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                      backgroundColor: const Color(0xFFF8FAFC),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _openCart(city);
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildItineraryProgressCard() {
     return Obx(() {
       if (!_cartController.hasActiveCart) {
@@ -437,12 +578,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     return GestureDetector(
                       onTap: () {
-                        if (activeCity != null) {
+                        if (count > 0 && activeCity != null) {
                           _openCart(activeCity);
-                        } else if (mockCities.isNotEmpty) {
-                          _openCart(mockCities.first);
+                        } else {
+                          _showCartSheet();
                         }
                       },
+                      onLongPress: _showCartSheet,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
@@ -783,7 +925,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Destination Full Explore Card ─────────────────────────────────────────
   Widget _buildDestinationExploreCard(CityCatalog city) {
-    return Container(
+    return InkWell(
+      onTap: () => _openCart(city),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -962,8 +1107,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── Explore Section 1: Trending Experiences ───────────────────────────────
   Widget _buildTrendingExperiences() {

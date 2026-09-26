@@ -21,6 +21,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final List<Map<String, dynamic>> _invitedUsers = [];
   bool _isCreating = false;
   bool _isSearching = false;
+  bool _openToSolos = false;
 
   Future<void> _lookupAndInvite() async {
     final email = _emailController.text.trim().toLowerCase();
@@ -108,6 +109,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     final group = await _groupService.createGroup(
       name: groupName,
       leaderId: currentUser.id,
+      openToSolos: _openToSolos,
+      maxSoloSeats: _openToSolos ? 2 : 0,
     );
 
     if (group == null) {
@@ -221,6 +224,77 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Solo Travelers Toggle ─────────────────────────────
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _openToSolos
+                              ? const Color(0xFFFC8019).withValues(alpha: 0.4)
+                              : Colors.grey.shade200,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: _openToSolos
+                                  ? const Color(0xFFFC8019).withValues(alpha: 0.12)
+                                  : Colors.grey.shade100,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.travel_explore_rounded,
+                              color: _openToSolos
+                                  ? const Color(0xFFFC8019)
+                                  : Colors.grey.shade600,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Open to Solo Travelers',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppColors.darkCharcoal,
+                                  ),
+                                ),
+                                Text(
+                                  'Allow verified solo explorers to discover and join your squad',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _openToSolos,
+                            activeThumbColor: const Color(0xFFFC8019),
+                            onChanged: (val) => setState(() => _openToSolos = val),
+                          ),
+                        ],
                       ),
                     ),
 

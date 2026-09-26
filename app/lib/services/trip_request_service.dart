@@ -11,7 +11,7 @@ class TripRequestService {
     required TripCartDraft draft,
   }) async {
     try {
-      final row = await _supabase.from('join_requests').insert({
+      final row = await _supabase.from('trip_requests').insert({
         'group_id': groupId,
         'destination': draft.city.name,
         'start_date': draft.startDate.toIso8601String().split('T').first,

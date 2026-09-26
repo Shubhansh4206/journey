@@ -1166,8 +1166,20 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   Widget _buildSwiggyDishCard(CatalogItem item, IconData icon, Color accentColor) {
     final isSelected = _selectedIds.contains(item.id);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+    return InkWell(
+      onTap: () {
+        setState(() {
+          if (isSelected) {
+            _selectedIds.remove(item.id);
+          } else {
+            _selectedIds.add(item.id);
+          }
+          _syncCartController();
+        });
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -1397,8 +1409,9 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── Checkout Summary Page View ─────────────────────────────────────────────
   Widget _buildSummaryContent() {

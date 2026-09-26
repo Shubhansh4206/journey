@@ -71,6 +71,24 @@ class GroupData {
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
     };
   }
+
+  GroupData copyWith({
+    String? id,
+    String? leaderId,
+    String? name,
+    bool? openToSolos,
+    int? maxSoloSeats,
+    DateTime? createdAt,
+  }) {
+    return GroupData(
+      id: id ?? this.id,
+      leaderId: leaderId ?? this.leaderId,
+      name: name ?? this.name,
+      openToSolos: openToSolos ?? this.openToSolos,
+      maxSoloSeats: maxSoloSeats ?? this.maxSoloSeats,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 /// Alias for compatibility

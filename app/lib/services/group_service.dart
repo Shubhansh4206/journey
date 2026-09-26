@@ -14,9 +14,11 @@ class GroupService {
   Future<GroupData?> createGroup({
     required String name,
     String? leaderId,
+    bool openToSolos = false,
+    int maxSoloSeats = 0,
   }) async {
     final effectiveLeaderId = leaderId ?? currentUserId;
-    debugPrint('🚀 [GroupService.createGroup] Starting: name="$name", leaderId=$effectiveLeaderId');
+    debugPrint('🚀 [GroupService.createGroup] Starting: name="$name", leaderId=$effectiveLeaderId, openToSolos=$openToSolos');
 
     if (name.trim().isEmpty) {
       debugPrint('❌ [GroupService.createGroup] Empty group name');
@@ -33,8 +35,8 @@ class GroupService {
       final groupRow = await _supabase.from('groups').insert({
         'name': name.trim(),
         'leader_id': effectiveLeaderId,
-        'open_to_solos': false,
-        'max_solo_seats': 0,
+        'open_to_solos': openToSolos,
+        'max_solo_seats': maxSoloSeats,
       }).select().single();
 
       debugPrint('✅ [GroupService.createGroup] Group inserted: $groupRow');
@@ -581,5 +583,30 @@ class GroupService {
   Future<List<GroupMemberItem>> getGroupMemberItems(String groupId) async {
     final rawMembers = await getGroupMembers(groupId);
     return rawMembers.map((m) => GroupMemberItem.fromJson(m)).toList();
+  }
+
+  /// Toggle or update solo traveler settings for a group
+  Future<bool> updateGroupSoloSettings({
+    required String groupId,
+    required bool openToSolos,
+    int? maxSoloSeats,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'open_to_solos': openToSolos,
+        'max_solo_seats': ?maxSoloSeats,
+      };
+
+      await _supabase
+          .from('groups')
+          .update(updates)
+          .eq('id', groupId);
+
+      debugPrint('✅ [GroupService.updateGroupSoloSettings] Group $groupId updated: $updates');
+      return true;
+    } catch (e, stack) {
+      debugPrint('❌ [GroupService.updateGroupSoloSettings] Error: $e\n$stack');
+      return false;
+    }
   }
 }
