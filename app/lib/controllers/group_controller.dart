@@ -3,17 +3,24 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/group_models.dart';
+import '../models/trip_request.dart';
 import '../screens/group_picker_sheet.dart';
 import '../services/group_service.dart';
+import '../services/trip_request_service.dart';
 
 class GroupController extends GetxController {
   final GroupService _groupService = GroupService();
+  final TripRequestService _tripRequestService = TripRequestService();
 
   // Reactive state
   final RxList<Map<String, dynamic>> userGroups = <Map<String, dynamic>>[].obs;
   final Rxn<SelectedGroup> selectedGroup = Rxn<SelectedGroup>();
   final RxInt pendingInvitesCount = 0.obs;
   final RxBool isLoading = false.obs;
+
+  // Sent trip requests state
+  final RxList<TripRequest> sentTripRequests = <TripRequest>[].obs;
+  final RxBool isLoadingTripRequests = false.obs;
 
   RealtimeChannel? _realtimeChannel;
   StreamSubscription<AuthState>? _authSubscription;
@@ -36,6 +43,7 @@ class GroupController extends GetxController {
         userGroups.clear();
         selectedGroup.value = null;
         pendingInvitesCount.value = 0;
+        sentTripRequests.clear();
       }
     });
   }
@@ -75,6 +83,15 @@ class GroupController extends GetxController {
               fetchUserGroups();
             },
           )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'trip_requests',
+            callback: (payload) {
+              debugPrint('⚡ [GroupController Realtime] trip_requests change: ${payload.eventType}');
+              fetchSentTripRequests();
+            },
+          )
           .subscribe();
       debugPrint('🛰️ [GroupController] Subscribed to Supabase Realtime channel');
     } catch (e) {
@@ -100,6 +117,7 @@ class GroupController extends GetxController {
     await Future.wait([
       fetchUserGroups(),
       fetchPendingInvitesCount(),
+      fetchSentTripRequests(),
     ]);
   }
 
@@ -175,5 +193,26 @@ class GroupController extends GetxController {
       return match['members'] as List<GroupMemberItem>;
     }
     return [];
+  }
+
+  Future<void> fetchSentTripRequests() async {
+    try {
+      isLoadingTripRequests.value = true;
+      final requests = await _tripRequestService.getUserTripRequests();
+      sentTripRequests.assignAll(requests);
+      debugPrint('📦 [GroupController] Fetched ${requests.length} sent trip requests');
+    } catch (e) {
+      debugPrint('GroupController.fetchSentTripRequests error: $e');
+    } finally {
+      isLoadingTripRequests.value = false;
+    }
+  }
+
+  Future<bool> cancelTripRequest(String requestId) async {
+    final success = await _tripRequestService.cancelTripRequest(requestId);
+    if (success) {
+      await fetchSentTripRequests();
+    }
+    return success;
   }
 }

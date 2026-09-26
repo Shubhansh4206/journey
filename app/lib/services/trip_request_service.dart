@@ -76,5 +76,50 @@ class TripRequestService {
       return null;
     }
   }
+
+  /// Fetch all trip requests submitted by the current authenticated user
+  Future<List<TripRequest>> getUserTripRequests() async {
+    try {
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId == null) {
+        debugPrint('⚠️ [TripRequestService.getUserTripRequests] No authenticated user');
+        return [];
+      }
+
+      debugPrint('⏳ [TripRequestService.getUserTripRequests] Querying for user: $currentUserId');
+      final rows = await _supabase
+          .from('trip_requests')
+          .select()
+          .eq('customer_id', currentUserId)
+          .order('created_at', ascending: false);
+
+      debugPrint('✅ [TripRequestService.getUserTripRequests] Found ${(rows as List).length} requests');
+      return rows
+          .map((r) => TripRequest.fromJson(Map<String, dynamic>.from(r)))
+          .toList();
+    } catch (e, stack) {
+      debugPrint('❌ [TripRequestService.getUserTripRequests] Error: $e\n$stack');
+      return [];
+    }
+  }
+
+  /// Cancel a trip request
+  Future<bool> cancelTripRequest(String requestId) async {
+    try {
+      debugPrint('⏳ [TripRequestService.cancelTripRequest] Cancelling: $requestId');
+      await _supabase
+          .from('trip_requests')
+          .update({
+            'status': 'cancelled',
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId);
+      debugPrint('✅ [TripRequestService.cancelTripRequest] Cancelled successfully');
+      return true;
+    } catch (e, stack) {
+      debugPrint('❌ [TripRequestService.cancelTripRequest] Error: $e\n$stack');
+      return false;
+    }
+  }
 }
 
