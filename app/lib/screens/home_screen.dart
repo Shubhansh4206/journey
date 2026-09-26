@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/mock_city_catalog.dart';
 import '../screens/itinerary_cart_screen.dart';
+import '../services/profile_service.dart';
 import '../utils/colors.dart';
 import '../widgets/travel_mode_toggle.dart';
 
@@ -27,6 +28,37 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'Heritage', 'icon': Icons.castle_outlined},
     {'name': 'Wellness', 'icon': Icons.spa_outlined},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    // 1. Initial metadata fallback
+    final metaName = user.userMetadata?['display_name'] ??
+        user.userMetadata?['full_name'] ??
+        user.email?.split('@').first;
+    if (metaName != null &&
+        metaName.toString().isNotEmpty &&
+        ProfileService.currentUserNameNotifier.value == null) {
+      ProfileService.currentUserNameNotifier.value = metaName.toString();
+    }
+
+    // 2. Query user profile from database to get fresh full_name
+    try {
+      final profile = await ProfileService().getProfile(user.id);
+      if (profile != null && profile.fullName.trim().isNotEmpty) {
+        ProfileService.currentUserNameNotifier.value = profile.fullName.trim();
+      }
+    } catch (e) {
+      debugPrint('Error loading user profile in HomeScreen: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -74,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
-    final userName = user?.userMetadata?['display_name'] ??
+    final defaultUserName = user?.userMetadata?['display_name'] ??
         user?.userMetadata?['full_name'] ??
         user?.email?.split('@').first ??
         'Explorer';
@@ -85,8 +117,18 @@ class _HomeScreenState extends State<HomeScreen> {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Upgraded App Bar
-            SliverToBoxAdapter(child: _buildUpgradedHeader(userName)),
+            // Upgraded App Bar with reactive dynamic user name
+            SliverToBoxAdapter(
+              child: ValueListenableBuilder<String?>(
+                valueListenable: ProfileService.currentUserNameNotifier,
+                builder: (context, dynamicName, _) {
+                  final activeName = (dynamicName != null && dynamicName.trim().isNotEmpty)
+                      ? dynamicName
+                      : defaultUserName;
+                  return _buildUpgradedHeader(activeName);
+                },
+              ),
+            ),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
             // Core Travel Mode Toggle

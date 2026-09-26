@@ -5,35 +5,34 @@ import '../models/user_profile.dart';
 class ProfileService {
   final SupabaseClient _client = Supabase.instance.client;
 
+  /// Global reactive notifier for current user's name across screens
+  static final ValueNotifier<String?> currentUserNameNotifier =
+      ValueNotifier<String?>(null);
+
   /// Fetch user profile from Supabase
   Future<UserProfile?> getProfile(String userId) async {
     try {
-      // 1. Try 'profiles' table first
-      try {
-        final data = await _client
-            .from('user_profiles')
-            .select()
-            .eq('id', userId)
-            .maybeSingle();
-        if (data != null) {
-          return UserProfile.fromJson(data);
+      for (final table in ['user_profiles', 'profiles', 'users']) {
+        try {
+          final data = await _client
+              .from(table)
+              .select()
+              .eq('id', userId)
+              .maybeSingle();
+          if (data != null) {
+            final profile = UserProfile.fromJson(data);
+            if (profile.fullName.isNotEmpty) {
+              currentUserNameNotifier.value = profile.fullName;
+            }
+            return profile;
+          }
+        } catch (e) {
+          final err = e.toString();
+          if (err.contains('PGRST205') || err.contains('42P01') || err.contains('not find the table')) {
+            continue;
+          }
+          debugPrint('Notice: Checking $table table: $e');
         }
-      } catch (e) {
-        debugPrint('Notice: Checking profiles table: $e');
-      }
-
-      // 2. Fallback to 'users' table
-      try {
-        final data = await _client
-            .from('users')
-            .select()
-            .eq('id', userId)
-            .maybeSingle();
-        if (data != null) {
-          return UserProfile.fromJson(data);
-        }
-      } catch (e) {
-        debugPrint('Notice: Checking users table: $e');
       }
 
       return null;
@@ -51,6 +50,9 @@ class ProfileService {
     for (final table in ['user_profiles', 'profiles', 'users']) {
       try {
         await _client.from(table).upsert(payload);
+        if (profile.fullName.isNotEmpty) {
+          currentUserNameNotifier.value = profile.fullName;
+        }
         return true;
       } catch (e) {
         final err = e.toString();
