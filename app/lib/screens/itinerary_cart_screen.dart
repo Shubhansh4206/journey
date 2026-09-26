@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/cart_controller.dart';
+import '../controllers/group_controller.dart';
 import '../data/mock_city_catalog.dart';
 import '../screens/group_picker_sheet.dart';
-import '../screens/solo_matches_screen.dart';
 import '../services/supabase_service.dart';
 import '../services/trip_request_service.dart';
 import '../utils/colors.dart';
@@ -199,22 +199,25 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   Future<void> _onPrimaryCta() async {
     if (!_canContinue) return;
     if (widget.isSolo) {
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SoloMatchesScreen(draft: _draft()),
-        ),
-      );
+      setState(() {
+        _selectedGroup = null;
+        _showSummary = true;
+      });
       return;
     }
 
-    final group = await showModalBottomSheet<SelectedGroup>(
+    SelectedGroup? group = _selectedGroup;
+    if (Get.isRegistered<GroupController>()) {
+      group ??= Get.find<GroupController>().selectedGroup.value;
+    }
+
+    group ??= await showModalBottomSheet<SelectedGroup>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const GroupPickerSheet(),
     );
+
     if (group == null) return;
     setState(() {
       _selectedGroup = group;
@@ -224,10 +227,24 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
   Future<void> _submit() async {
     final group = _selectedGroup;
-    if (group == null) return;
+    if (group == null && !widget.isSolo) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select a squad for this group trip.',
+            style: GoogleFonts.poppins(color: Colors.white),
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     final created = await TripRequestService().create(
-      groupId: group.id,
+      groupId: group?.id,
+      assignedGroupName: group?.name ??
+          (widget.isSolo ? 'Solo Explorer' : 'Travel Squad'),
       draft: _draft(),
     );
     setState(() => _submitting = false);
@@ -236,7 +253,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Could not submit trip. Try again.',
+            'Could not submit trip request. Please try again.',
             style: GoogleFonts.poppins(color: Colors.white),
           ),
           backgroundColor: AppColors.danger,
@@ -244,6 +261,12 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       );
       return;
     }
+
+    // Clear cart upon successful submission
+    if (Get.isRegistered<CartController>()) {
+      Get.find<CartController>().clearCart();
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -1459,9 +1482,9 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
               _summaryRow('Destination', widget.city.name),
               _summaryRow('Trip Mode', widget.isSolo ? 'Solo Journey' : 'Group Squad'),
-              if (group != null) _summaryRow('Assigned Group', group.name),
+              _summaryRow('Assigned Group', widget.isSolo ? 'Solo Explorer' : (group?.name ?? 'Travel Squad')),
               _summaryRow('Travel Dates', '${_fmt(_startDate)} → ${_fmt(_endDate)}'),
-              _summaryRow('Per Person Budget', '₹${_budget.toStringAsFixed(0)}'),
+              _summaryRow('Per Person Budget', '₹${_budget.toStringAsFixed(2)}'),
 
               const SizedBox(height: 16),
               Text(

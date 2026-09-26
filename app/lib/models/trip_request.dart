@@ -1,43 +1,90 @@
 class TripRequest {
   final String id;
-  final String groupId;
+  final String? customerId;
+  final String? groupId;
+
+  // 1. Header Details from UI
   final String destination;
+  final String tripMode; // 'Group Squad' or 'Solo Journey'
+  final String? assignedGroupName;
+
+  // 2. Dates & Financials
   final DateTime startDate;
   final DateTime endDate;
-  final String? travelPace;
-  final double maxBudgetPerPax;
-  final List<Map<String, dynamic>> requestedCartItems;
-  final String status; // 'broadcasting', 'reviewing_bids', 'closed'
+  final double perPersonBudget;
+  final double estimatedMockTotal;
+
+  // 3. Itemized Itinerary Selections (UUID arrays)
+  final List<String> selectedHotels;
+  final List<String> selectedPlaces;
+  final List<String> selectedActivities;
+  final List<String> selectedTransport;
+
+  // 4. Tracking
+  final String status; // 'pending'
   final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  // Backward compatibility getters
+  double get maxBudgetPerPax => perPersonBudget;
+  List<Map<String, dynamic>> get requestedCartItems => [];
 
   TripRequest({
     required this.id,
-    required this.groupId,
+    this.customerId,
+    this.groupId,
     required this.destination,
+    this.tripMode = 'Group Squad',
+    this.assignedGroupName,
     required this.startDate,
     required this.endDate,
-    this.travelPace,
-    required this.maxBudgetPerPax,
-    this.requestedCartItems = const [],
-    this.status = 'broadcasting',
+    required this.perPersonBudget,
+    this.estimatedMockTotal = 0.0,
+    this.selectedHotels = const [],
+    this.selectedPlaces = const [],
+    this.selectedActivities = const [],
+    this.selectedTransport = const [],
+    this.status = 'pending',
     this.createdAt,
+    this.updatedAt,
   });
 
   factory TripRequest.fromJson(Map<String, dynamic> json) {
+    List<String> parseUuidList(dynamic value) {
+      if (value is List) {
+        return value.map((e) => e.toString()).toList();
+      }
+      return [];
+    }
+
     return TripRequest(
-      id: json['id'] as String,
-      groupId: json['group_id'] as String,
-      destination: json['destination'] as String,
-      startDate: DateTime.parse(json['start_date'].toString()),
-      endDate: DateTime.parse(json['end_date'].toString()),
-      travelPace: json['travel_pace'] as String?,
-      maxBudgetPerPax: (json['max_budget_per_pax'] as num).toDouble(),
-      requestedCartItems: List<Map<String, dynamic>>.from(
-        json['requested_cart_items'] ?? [],
-      ),
-      status: json['status'] as String? ?? 'broadcasting',
+      id: json['id'] as String? ?? '',
+      customerId: json['customer_id'] as String?,
+      groupId: json['group_id'] as String?,
+      destination: json['destination'] as String? ?? '',
+      tripMode: json['trip_mode'] as String? ?? 'Group Squad',
+      assignedGroupName: json['assigned_group_name'] as String?,
+      startDate: json['start_date'] != null
+          ? DateTime.tryParse(json['start_date'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      endDate: json['end_date'] != null
+          ? DateTime.tryParse(json['end_date'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      perPersonBudget: (json['per_person_budget'] as num?)?.toDouble() ??
+          (json['max_budget_per_pax'] as num?)?.toDouble() ??
+          0.0,
+      estimatedMockTotal:
+          (json['estimated_mock_total'] as num?)?.toDouble() ?? 0.0,
+      selectedHotels: parseUuidList(json['selected_hotels']),
+      selectedPlaces: parseUuidList(json['selected_places']),
+      selectedActivities: parseUuidList(json['selected_activities']),
+      selectedTransport: parseUuidList(json['selected_transport']),
+      status: json['status'] as String? ?? 'pending',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }
@@ -45,14 +92,22 @@ class TripRequest {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'group_id': groupId,
+      'customer_id': ?customerId,
+      'group_id': ?groupId,
       'destination': destination,
+      'trip_mode': tripMode,
+      'assigned_group_name': ?assignedGroupName,
       'start_date': startDate.toIso8601String().split('T').first,
       'end_date': endDate.toIso8601String().split('T').first,
-      'travel_pace': travelPace,
-      'max_budget_per_pax': maxBudgetPerPax,
-      'requested_cart_items': requestedCartItems,
+      'per_person_budget': perPersonBudget,
+      'estimated_mock_total': estimatedMockTotal,
+      'selected_hotels': selectedHotels,
+      'selected_places': selectedPlaces,
+      'selected_activities': selectedActivities,
+      'selected_transport': selectedTransport,
       'status': status,
+      'created_at': ?createdAt?.toIso8601String(),
+      'updated_at': ?updatedAt?.toIso8601String(),
     };
   }
-}
+}
