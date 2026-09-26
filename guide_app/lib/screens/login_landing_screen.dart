@@ -19,10 +19,9 @@ class LoginLandingScreen extends StatefulWidget {
 class _LoginLandingScreenState extends State<LoginLandingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(text: 'ryan.vance@journeyguide.com');
-  final _passwordController = TextEditingController(text: 'AlpineGuide2026!');
+  final _passwordController = TextEditingController(text: '••••••••••••');
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _rememberMe = true;
 
   @override
   void dispose() {
@@ -35,12 +34,9 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    final success = widget.guideState.login(
-      _emailController.text,
-      _passwordController.text,
-    );
+    final success = widget.guideState.login(_emailController.text);
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -49,28 +45,23 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Invalid credentials. Please enter email and password.'),
+            content: Text(
+              'Access denied: Email is not registered in the operator guide directory. Please contact your tour operator.',
+            ),
             backgroundColor: AppTheme.danger,
+            duration: Duration(seconds: 4),
           ),
         );
       }
     }
   }
 
-  void _fillDemoGuide(String email, String pass) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = pass;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 900;
-
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -86,30 +77,19 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: isDesktop
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 480,
-                          child: _buildHeroBranding(),
-                        ),
-                        const SizedBox(width: 60),
-                        SizedBox(
-                          width: 440,
-                          child: _buildLoginFormCard(),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildHeroBranding(isCompact: true),
-                        const SizedBox(height: 32),
-                        _buildLoginFormCard(),
-                      ],
-                    ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Top Portal Branding Title
+                    _buildPortalHeader(),
+                    const SizedBox(height: 28),
+                    // Guide Sign In Form Card
+                    _buildLoginFormCard(),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -117,120 +97,23 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
     );
   }
 
-  Widget _buildHeroBranding({bool isCompact = false}) {
-    return Column(
-      crossAxisAlignment: isCompact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+  Widget _buildPortalHeader() {
+    return const Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Brand Badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.explore_rounded, color: AppTheme.secondary, size: 18),
-              SizedBox(width: 8),
-              Text(
-                'JOURNEY GUIDE PORTAL',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
+        Icon(
+          Icons.explore_rounded,
+          color: AppTheme.secondary,
+          size: 30,
         ),
-        const SizedBox(height: 18),
+        SizedBox(width: 12),
         Text(
-          'Lead Extraordinary Journeys.',
-          textAlign: isCompact ? TextAlign.center : TextAlign.left,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 34,
-            fontWeight: FontWeight.w800,
-            height: 1.15,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          'Receive exclusive tour packages, review traveler rosters, accept assignments, and coordinate directly with your booked tourists in real time.',
-          textAlign: isCompact ? TextAlign.center : TextAlign.left,
+          'Journey Guide Portal',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.85),
-            fontSize: 15,
-            height: 1.45,
-          ),
-        ),
-        const SizedBox(height: 28),
-        // Feature bullets
-        _buildFeatureItem(
-          icon: Icons.assignment_turned_in_rounded,
-          title: 'Direct Package Allocation',
-          subtitle: 'Review itinerary details, payout rates, and accept or decline with one click.',
-        ),
-        const SizedBox(height: 16),
-        _buildFeatureItem(
-          icon: Icons.groups_rounded,
-          title: 'Direct Tourist Connection',
-          subtitle: 'Access traveler profiles, emergency contacts, special dietary notes & live group chat.',
-        ),
-        const SizedBox(height: 16),
-        _buildFeatureItem(
-          icon: Icons.account_balance_wallet_rounded,
-          title: 'Guaranteed Guide Payouts',
-          subtitle: 'Transparent compensation per tour with fast settlements directly to your account.',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeatureItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppTheme.accent.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
-          ),
-          child: Icon(icon, color: AppTheme.accent, size: 20),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 12.5,
-                  height: 1.3,
-                ),
-              ),
-            ],
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
       ],
@@ -285,7 +168,7 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
                       ),
                     ),
                     Text(
-                      'Enter your certified credentials',
+                      'Enter your operator-registered email',
                       style: TextStyle(
                         fontSize: 13,
                         color: AppTheme.textSecondary,
@@ -310,15 +193,16 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
               decoration: const InputDecoration(
-                hintText: 'e.g. guide@journey.com',
+                hintText: 'e.g. ryan.vance@journeyguide.com',
                 prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textSecondary, size: 20),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter your guide email';
                 }
-                if (!value.contains('@')) {
+                if (!value.contains('@') || !value.contains('.')) {
                   return 'Please enter a valid email address';
                 }
                 return null;
@@ -326,7 +210,7 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
             ),
             const SizedBox(height: 18),
 
-            // Password Field
+            // Password Field (Demo look)
             const Text(
               'Password',
               style: TextStyle(
@@ -351,57 +235,35 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your password';
-                }
-                return null;
-              },
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
 
-            // Remember me & Forgot
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: Checkbox(
-                        value: _rememberMe,
-                        activeColor: AppTheme.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                        onChanged: (val) => setState(() => _rememberMe = val ?? true),
-                      ),
+            // Forgot password link
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Password reset instructions sent to your registered guide email.'),
+                      backgroundColor: AppTheme.info,
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Remember me',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                    ),
-                  ],
+                  );
+                },
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(50, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                TextButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Password reset link sent to your registered guide email.'),
-                        backgroundColor: AppTheme.info,
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Forgot password?',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primary,
-                    ),
+                child: const Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primary,
                   ),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -438,69 +300,7 @@ class _LoginLandingScreenState extends State<LoginLandingScreen> {
                       ),
               ),
             ),
-            const SizedBox(height: 22),
-
-            // Demo Quick Logins
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.bolt_rounded, color: AppTheme.secondary, size: 16),
-                      SizedBox(width: 6),
-                      Text(
-                        'Demo Guide Accounts',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildQuickDemoChip('Alpine Lead (Ryan Vance)', 'ryan.vance@journeyguide.com', 'AlpineGuide2026!'),
-                      _buildQuickDemoChip('Kyoto Expert (Yuki Tanaka)', 'yuki.tanaka@journeyguide.com', 'KyotoTrail2026!'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickDemoChip(String label, String email, String pass) {
-    return InkWell(
-      onTap: () => _fillDemoGuide(email, pass),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFCBD5E1)),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.primary,
-          ),
         ),
       ),
     );

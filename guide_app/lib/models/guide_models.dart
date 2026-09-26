@@ -72,6 +72,8 @@ class TourPackage {
   final int maxCapacity;
   final String difficulty;
   final String meetingPoint;
+  final String meetingPointEta;
+  final String logisticsBadge;
   final String description;
   final List<String> highlights;
   final List<String> inclusions;
@@ -92,6 +94,8 @@ class TourPackage {
     required this.maxCapacity,
     required this.difficulty,
     required this.meetingPoint,
+    this.meetingPointEta = '',
+    this.logisticsBadge = 'Walking Tour Only',
     required this.description,
     required this.highlights,
     required this.inclusions,

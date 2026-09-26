@@ -4,6 +4,7 @@ import '../state/guide_state.dart';
 import '../theme/app_theme.dart';
 import 'package:guide_app/screens/package_details_screen.dart';
 import 'package:guide_app/screens/tourist_chat_screen.dart';
+import 'package:guide_app/screens/tour_guide_profile_screen.dart';
 
 class GuideDashboardScreen extends StatefulWidget {
   final GuideState guideState;
@@ -22,8 +23,79 @@ class GuideDashboardScreen extends StatefulWidget {
 class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
   int _currentTabIndex = 0;
 
+  String _formatINR(num amount) {
+    final int val = amount.round();
+    return val.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        );
+  }
+
+  void _showEditGoalDialog() {
+    final currentGoal = widget.guideState.weeklyGoal.round().toString();
+    final controller = TextEditingController(text: currentGoal);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.track_changes_rounded, color: AppTheme.primary),
+            SizedBox(width: 8),
+            Text('Set Weekly Target', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your weekly earnings target in INR (₹):',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(
+                prefixText: '₹ ',
+                hintText: '40000',
+                labelText: 'Weekly Goal (₹)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text.replaceAll(',', '').trim());
+              if (val != null && val > 0) {
+                widget.guideState.setWeeklyGoal(val);
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Weekly target updated to ₹${_formatINR(val)}!'),
+                    backgroundColor: AppTheme.success,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Save Goal'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showRejectDialog(TourPackage pkg) {
-    String selectedReason = 'Schedule conflict with existing booking';
+    String selectedReason = 'Schedule conflict on dates';
     final customReasonController = TextEditingController();
 
     showDialog(
@@ -54,19 +126,19 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
               const SizedBox(height: 12),
               _buildReasonOption(
                 title: 'Schedule conflict on dates',
-                value: 'Schedule conflict with existing booking',
+                value: 'Schedule conflict on dates',
                 groupValue: selectedReason,
                 onChanged: (val) => setDialogState(() => selectedReason = val!),
               ),
               _buildReasonOption(
                 title: 'Location outside my active zone',
-                value: 'Route outside primary jurisdiction',
+                value: 'Location outside my active zone',
                 groupValue: selectedReason,
                 onChanged: (val) => setDialogState(() => selectedReason = val!),
               ),
               _buildReasonOption(
                 title: 'Group size exceeds capacity',
-                value: 'Group size exceeds guide preference',
+                value: 'Group size exceeds capacity',
                 groupValue: selectedReason,
                 onChanged: (val) => setDialogState(() => selectedReason = val!),
               ),
@@ -101,9 +173,10 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
                 Navigator.of(ctx).pop();
 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+                  const SnackBar(
                     content: Text('Package declined. Reallocated to network.'),
                     backgroundColor: AppTheme.textPrimary,
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               },
@@ -121,14 +194,24 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
     required String groupValue,
     required ValueChanged<String?> onChanged,
   }) {
-    return RadioListTile<String>(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(fontSize: 13)),
-      value: value,
-      groupValue: groupValue,
-      activeColor: AppTheme.danger,
-      onChanged: onChanged,
+    final isSelected = value == groupValue;
+    return InkWell(
+      onTap: () => onChanged(value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+              color: isSelected ? AppTheme.danger : AppTheme.textSecondary,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -140,23 +223,20 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
           children: [
             const Icon(Icons.check_circle_rounded, color: Colors.white),
             const SizedBox(width: 8),
-            Expanded(child: Text('Accepted "${pkg.title}"!')),
+            Expanded(
+              child: Text(
+                'Accepted "${pkg.title}"! (+₹${_formatINR(pkg.payoutAmount)} added to Escrow)',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         ),
         backgroundColor: AppTheme.success,
+        behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
-          label: 'Connect',
+          label: 'My Tours',
           textColor: Colors.white,
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => TouristChatScreen(
-                  package: pkg,
-                  guideState: widget.guideState,
-                ),
-              ),
-            );
-          },
+          onPressed: () => setState(() => _currentTabIndex = 1),
         ),
       ),
     );
@@ -164,114 +244,37 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final guide = widget.guideState.currentGuide;
-
     return ListenableBuilder(
       listenable: widget.guideState,
       builder: (context, _) {
+        final guide = widget.guideState.currentGuide;
         final pending = widget.guideState.pendingPackages;
         final accepted = widget.guideState.acceptedPackages;
 
         return Scaffold(
-          appBar: AppBar(
-            backgroundColor: AppTheme.surface,
-            elevation: 0,
-            title: Row(
+          backgroundColor: const Color(0xFFF4F7FB),
+          body: SafeArea(
+            child: Column(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: NetworkImage(guide.avatarUrl),
-                ),
-                const SizedBox(width: 12),
+                // Header Section (shown on Requests, My Tours, and Tourist Hub; hidden on Profile to avoid double header)
+                if (_currentTabIndex != 3) _buildHeaderSection(guide),
+
+                // Tab Body
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: IndexedStack(
+                    index: _currentTabIndex,
                     children: [
-                      Text(
-                        guide.name,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded, color: AppTheme.warning, size: 16),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${guide.rating} (${guide.totalTours} Tours)',
-                            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
+                      _buildPendingPackagesTab(pending),
+                      _buildAcceptedToursTab(accepted),
+                      _buildTouristHubTab(accepted),
+                      _buildGuideProfileTab(guide),
                     ],
                   ),
                 ),
               ],
             ),
-            actions: [
-              // Online Toggle
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: guide.isAvailable ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: guide.isAvailable ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: guide.isAvailable ? AppTheme.success : AppTheme.danger,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      guide.isAvailable ? 'Available' : 'Busy',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: guide.isAvailable ? const Color(0xFF065F46) : const Color(0xFF991B1B),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Switch(
-                      value: guide.isAvailable,
-                      activeColor: AppTheme.success,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      onChanged: (val) => widget.guideState.toggleAvailability(),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout_rounded, color: AppTheme.textSecondary),
-                tooltip: 'Sign Out',
-                onPressed: widget.onLogout,
-              ),
-            ],
           ),
-          body: Column(
-            children: [
-              // Stats Overview Header
-              _buildStatsBanner(),
-
-              // Body Content by Tab
-              Expanded(
-                child: IndexedStack(
-                  index: _currentTabIndex,
-                  children: [
-                    _buildPendingPackagesTab(pending),
-                    _buildAcceptedToursTab(accepted),
-                    _buildTouristHubTab(accepted),
-                    _buildGuideProfileTab(guide),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          // 4. Complete Navigation Bar with Dynamic Badges
           bottomNavigationBar: NavigationBar(
             selectedIndex: _currentTabIndex,
             onDestinationSelected: (index) => setState(() => _currentTabIndex = index),
@@ -322,50 +325,308 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
     );
   }
 
-  Widget _buildStatsBanner() {
+  // ==========================================
+  // 1. HEADER SECTION (Clean Two-Row Layout)
+  // ==========================================
+  Widget _buildHeaderSection(GuideUser guide) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: CircleAvatar + Expanded Column (Name & Rating) - No Logout Button
+          Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.primary, width: 2),
+                ),
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppTheme.primaryLight,
+                  backgroundImage: NetworkImage(guide.avatarUrl),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      guide.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, color: AppTheme.warning, size: 17),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${guide.rating}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '• ${guide.totalTours} Verified Tours',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppTheme.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Row 2: Available / Busy Status Pill Toggle Switch
+          Row(
+            children: [
+              InkWell(
+                onTap: () => widget.guideState.toggleAvailability(),
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: guide.isAvailable ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: guide.isAvailable ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: guide.isAvailable ? AppTheme.success : AppTheme.danger,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        guide.isAvailable ? 'Status: Ready for Tours (Available)' : 'Status: Off-Duty (Busy)',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: guide.isAvailable ? const Color(0xFF065F46) : const Color(0xFF991B1B),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        height: 20,
+                        width: 32,
+                        child: Switch(
+                          value: guide.isAvailable,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          activeThumbColor: AppTheme.success,
+                          inactiveThumbColor: AppTheme.danger,
+                          activeTrackColor: const Color(0xFFA7F3D0),
+                          inactiveTrackColor: const Color(0xFFFECACA),
+                          onChanged: (val) => widget.guideState.toggleAvailability(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // 2. METRICS DASHBOARD (INR, Escrow, Editable Goal - Compact & Requests Only)
+  // ==========================================
+  Widget _buildStatsBanner({bool isInsidePaddedList = false}) {
+    final double totalPayout = widget.guideState.totalPotentialEarnings;
+    final double inEscrow = widget.guideState.inEscrowEarnings;
+    final double readyToWithdraw = widget.guideState.readyToWithdraw;
+    final double weeklyGoal = widget.guideState.weeklyGoal;
+    final double progress = (totalPayout / weeklyGoal).clamp(0.0, 1.0);
+
+    return Container(
+      margin: isInsidePaddedList
+          ? const EdgeInsets.fromLTRB(0, 8, 0, 8)
+          : const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF0F4C5C), Color(0xFF1B6B7D)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F4C5C).withOpacity(0.2),
+            color: const Color(0xFF0F4C5C).withValues(alpha: 0.22),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildBannerStat(
-            label: 'New Offers',
-            value: '${widget.guideState.pendingPackages.length}',
-            icon: Icons.inbox_rounded,
+          // Top Stat Columns: "New Offers" & "Active Tours" (Total Tourists removed as requested)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildBannerStat(
+                label: 'New Offers',
+                value: '${widget.guideState.pendingPackages.length}',
+                icon: Icons.inbox_rounded,
+              ),
+              Container(width: 1, height: 26, color: Colors.white.withValues(alpha: 0.2)),
+              _buildBannerStat(
+                label: 'Active Tours',
+                value: '${widget.guideState.acceptedPackages.length}',
+                icon: Icons.tour_rounded,
+              ),
+            ],
           ),
-          Container(width: 1, height: 32, color: Colors.white.withOpacity(0.2)),
-          _buildBannerStat(
-            label: 'Active Tours',
-            value: '${widget.guideState.acceptedPackages.length}',
-            icon: Icons.tour_rounded,
+
+          const SizedBox(height: 9),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.15)),
+          const SizedBox(height: 9),
+
+          // Projected Payout in INR & Escrow Breakdown Split (Sleeker & More Compact)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'PROJECTED PAYOUT',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    '₹${_formatINR(totalPayout)}',
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '₹${_formatINR(inEscrow)} In Escrow',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6EE7B7),
+                      ),
+                    ),
+                    Text(
+                      '₹${_formatINR(readyToWithdraw)} Ready to Withdraw',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Container(width: 1, height: 32, color: Colors.white.withOpacity(0.2)),
-          _buildBannerStat(
-            label: 'Total Tourists',
-            value: '${widget.guideState.totalRegisteredTourists}',
-            icon: Icons.groups_rounded,
-          ),
-          Container(width: 1, height: 32, color: Colors.white.withOpacity(0.2)),
-          _buildBannerStat(
-            label: 'Projected Payout',
-            value: '\$${widget.guideState.totalPotentialEarnings.toStringAsFixed(0)}',
-            icon: Icons.account_balance_wallet_rounded,
+
+          const SizedBox(height: 9),
+
+          // Editable Weekly Goal Progress Bar
+          InkWell(
+            onTap: _showEditGoalDialog,
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Weekly Target',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.edit_rounded, color: Colors.white70, size: 11),
+                        ],
+                      ),
+                      Text(
+                        '₹${_formatINR(totalPayout)} / ₹${_formatINR(weeklyGoal)} Weekly Goal',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 5,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2A9D8F)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -386,228 +647,203 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
             const SizedBox(width: 4),
             Text(
               value,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.8)),
+          style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
         ),
       ],
     );
   }
 
-  // TAB 1: Pending Packages for Guide to Accept or Reject
+  // ==========================================
+  // TAB 1: REQUESTS TAB (Accept / Decline + Expected Payout Bar)
+  // ==========================================
   Widget _buildPendingPackagesTab(List<TourPackage> pending) {
     if (pending.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceVariant,
-                  shape: BoxShape.circle,
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+        children: [
+          _buildStatsBanner(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.surfaceVariant,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.done_all_rounded, size: 44, color: AppTheme.success),
                 ),
-                child: const Icon(Icons.done_all_rounded, size: 48, color: AppTheme.success),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'All Caught Up!',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'No pending package assignments right now. New matched tours will appear here automatically.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.5, color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.explore_rounded),
-                label: const Text('View Active Tours'),
-                onPressed: () => setState(() => _currentTabIndex = 1),
-              ),
-            ],
+                const SizedBox(height: 14),
+                const Text(
+                  'All Caught Up!',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'No pending package assignments right now. New matched tours will appear here automatically.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 18),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.explore_rounded, size: 18),
+                  label: const Text('View Active Tours'),
+                  onPressed: () => setState(() => _currentTabIndex = 1),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      itemCount: pending.length,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      itemCount: pending.length + 1,
       itemBuilder: (context, index) {
-        final pkg = pending[index];
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildStatsBanner(isInsidePaddedList: true),
+          );
+        }
+        final pkg = pending[index - 1];
         return _buildPendingPackageCard(pkg);
       },
     );
   }
 
   Widget _buildPendingPackageCard(TourPackage pkg) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFD8BF), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => PackageDetailsScreen(
-                package: pkg,
-                guideState: widget.guideState,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Half: Image Container with Dark Gradient Overlay
+          Container(
+            height: 160,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage(pkg.imageUrl),
+                fit: BoxFit.cover,
               ),
             ),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image Banner with Badges
-            Stack(
-              children: [
-                Image.network(
-                  pkg.imageUrl,
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (ctx, err, stack) => Container(
-                    height: 160,
-                    color: AppTheme.primaryDark,
-                    child: const Icon(Icons.landscape, size: 48, color: Colors.white),
-                  ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: 0.75),
+                  ],
                 ),
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.secondary,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.bolt_rounded, color: Colors.white, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'NEW REQUEST',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.75),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Payout: \$${pkg.payoutAmount.toStringAsFixed(0)}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // Content info
-            Padding(
-              padding: const EdgeInsets.all(16),
+              ),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    pkg.title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                  ),
-                  const SizedBox(height: 6),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.location_on, color: AppTheme.accent, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        pkg.destination,
-                        style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.secondary,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.bolt_rounded, color: Colors.white, size: 13),
+                            SizedBox(width: 4),
+                            Text(
+                              'NEW REQUEST',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.calendar_today, color: AppTheme.primary, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        pkg.dates,
-                        style: const TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF6EE7B7).withValues(alpha: 0.5)),
+                        ),
+                        child: Text(
+                          'Payout: ₹${_formatINR(pkg.payoutAmount)}',
+                          style: const TextStyle(
+                            color: Color(0xFF6EE7B7),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    pkg.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.35),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Tourists summary
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceVariant,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.groups_rounded, color: AppTheme.primary, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${pkg.tourists.length} registered parties (${pkg.currentBookings}/${pkg.maxCapacity} spots booked)',
-                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Action Buttons: Reject & Accept
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 1,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.danger,
-                            side: const BorderSide(color: Color(0xFFFCA5A5)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                      Row(
+                        children: [
+                          const Icon(Icons.place_rounded, color: Color(0xFF2A9D8F), size: 15),
+                          const SizedBox(width: 4),
+                          Text(
+                            pkg.destination.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.0,
+                            ),
                           ),
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                          label: const Text('Decline'),
-                          onPressed: () => _showRejectDialog(pkg),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.success,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.check_circle_rounded, size: 18),
-                          label: const Text('Accept Tour Assignment'),
-                          onPressed: () => _acceptPackage(pkg),
+                      const SizedBox(height: 2),
+                      Text(
+                        pkg.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
                         ),
                       ),
                     ],
@@ -615,13 +851,119 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Bottom Half: Logistics, Meeting Point & Action Buttons
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded, color: AppTheme.primary, size: 14),
+                    const SizedBox(width: 5),
+                    Text(
+                      pkg.dates,
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.people_outline_rounded, color: AppTheme.textSecondary, size: 15),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${pkg.currentBookings}/${pkg.maxCapacity} Booked',
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // Meeting Point & Distance
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on, color: AppTheme.secondary, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        pkg.meetingPointEta.isNotEmpty ? pkg.meetingPointEta : 'Starts at ${pkg.meetingPoint}',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // Logistics Check Pill Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2F6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.directions_walk_rounded, size: 14, color: AppTheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        pkg.logisticsBadge,
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppTheme.primary),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Actions: Decline & Accept Tour Assignment
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: OutlinedButton(
+                        onPressed: () => _showRejectDialog(pkg),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.danger,
+                          side: const BorderSide(color: Color(0xFFFCA5A5)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Decline', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _acceptPackage(pkg),
+                        icon: const Icon(Icons.check_circle_rounded, size: 17),
+                        label: const Text('Accept Tour Assignment', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // TAB 2: Accepted Tours with Direct Connect
+  // ==========================================
+  // TAB 2: MY TOURS (Confirmed Active Tours)
+  // ==========================================
   Widget _buildAcceptedToursTab(List<TourPackage> accepted) {
     if (accepted.isEmpty) {
       return Center(
@@ -654,7 +996,7 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       itemCount: accepted.length,
       itemBuilder: (context, index) {
         final pkg = accepted[index];
@@ -664,109 +1006,157 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
   }
 
   Widget _buildAcceptedTourCard(TourPackage pkg) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              Image.network(
-                pkg.imageUrl,
-                height: 140,
-                width: double.infinity,
+          Container(
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage(pkg.imageUrl),
                 fit: BoxFit.cover,
               ),
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.success,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.3),
+                    Colors.black.withValues(alpha: 0.7),
+                  ],
+                ),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
-                      SizedBox(width: 4),
-                      Text(
-                        'CONFIRMED ACTIVE TOUR',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_rounded, color: Colors.white, size: 13),
+                            SizedBox(width: 4),
+                            Text(
+                              'CONFIRMED ACTIVE TOUR',
+                              style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '₹${_formatINR(pkg.payoutAmount)}',
+                          style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 12, fontWeight: FontWeight.w800),
+                        ),
                       ),
                     ],
                   ),
-                ),
+                  Text(
+                    pkg.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  pkg.title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${pkg.destination} • ${pkg.dates}',
-                  style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.pin_drop, size: 16, color: AppTheme.primary),
+                    const Icon(Icons.location_on, size: 15, color: AppTheme.primary),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        pkg.meetingPoint,
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        pkg.meetingPointEta.isNotEmpty ? pkg.meetingPointEta : pkg.meetingPoint,
+                        style: const TextStyle(fontSize: 12.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 14, color: AppTheme.textSecondary),
+                    const SizedBox(width: 5),
+                    Text(pkg.dates, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  ],
+                ),
+                const Divider(height: 22),
 
                 // Tourist Rosters Preview
                 Row(
                   children: [
-                    SizedBox(
-                      height: 32,
-                      child: Row(
-                        children: pkg.tourists
-                            .take(4)
-                            .map((t) => Align(
-                                  widthFactor: 0.7,
-                                  child: CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: Colors.white,
+                    if (pkg.tourists.isNotEmpty)
+                      SizedBox(
+                        height: 30,
+                        child: Row(
+                          children: pkg.tourists
+                              .take(4)
+                              .map((t) => Align(
+                                    widthFactor: 0.7,
                                     child: CircleAvatar(
-                                      radius: 14,
-                                      backgroundImage: NetworkImage(t.avatarUrl),
+                                      radius: 15,
+                                      backgroundColor: Colors.white,
+                                      child: CircleAvatar(
+                                        radius: 13,
+                                        backgroundImage: NetworkImage(t.avatarUrl),
+                                      ),
                                     ),
-                                  ),
-                                ))
-                            .toList(),
+                                  ))
+                              .toList(),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         '${pkg.tourists.length} registered parties (${pkg.currentBookings} travelers)',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // Direct Connection Button
+                // Direct Connection Button & Details
                 Row(
                   children: [
                     Expanded(
@@ -774,6 +1164,7 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
                           padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         icon: const Icon(Icons.forum_rounded, size: 18),
                         label: const Text('Connect with Tourists'),
@@ -791,7 +1182,10 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
                     ),
                     const SizedBox(width: 10),
                     OutlinedButton(
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                       child: const Text('Details'),
                       onPressed: () {
                         Navigator.of(context).push(
@@ -814,13 +1208,18 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
     );
   }
 
-  // TAB 3: Tourist Hub (Browse all tourists across accepted tours)
+  // ==========================================
+  // TAB 3: TOURIST HUB TAB
+  // ==========================================
   Widget _buildTouristHubTab(List<TourPackage> accepted) {
     if (accepted.isEmpty) {
       return const Center(
-        child: Text(
-          'Accept packages to connect with booked tourists.',
-          style: TextStyle(color: AppTheme.textSecondary),
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Text(
+            'Accept packages to connect with booked tourists.',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          ),
         ),
       );
     }
@@ -907,97 +1306,12 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
     );
   }
 
-  // TAB 4: Guide Profile
+  // ==========================================
+  // TAB 4: PROFILE TAB (Rich Profile Dashboard)
+  // ==========================================
   Widget _buildGuideProfileTab(GuideUser guide) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      children: [
-        // Profile Card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: NetworkImage(guide.avatarUrl),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                guide.name,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-              ),
-              Text(
-                guide.badge,
-                style: const TextStyle(fontSize: 13, color: AppTheme.accent, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children: guide.languages
-                    .map((lang) => Chip(
-                          label: Text(lang, style: const TextStyle(fontSize: 11)),
-                          padding: EdgeInsets.zero,
-                          backgroundColor: AppTheme.surfaceVariant,
-                          side: BorderSide.none,
-                        ))
-                    .toList(),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Specialties
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Certified Guide Specialties',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 10),
-              ...guide.specialties.map((spec) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.verified, color: AppTheme.success, size: 16),
-                        const SizedBox(width: 8),
-                        Text(spec, style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
-                      ],
-                    ),
-                  )),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Sign out button
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.danger,
-              side: const BorderSide(color: Color(0xFFFCA5A5)),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Sign Out of Guide Portal'),
-            onPressed: widget.onLogout,
-          ),
-        ),
-      ],
+    return TourGuideProfileScreen(
+      onLogout: widget.onLogout,
     );
   }
 }
