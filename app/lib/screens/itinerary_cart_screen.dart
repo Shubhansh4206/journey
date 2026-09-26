@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../controllers/cart_controller.dart';
+import '../controllers/group_controller.dart';
 import '../data/mock_city_catalog.dart';
 import '../screens/group_picker_sheet.dart';
-import '../screens/solo_matches_screen.dart';
 import '../services/supabase_service.dart';
 import '../services/trip_request_service.dart';
 import '../utils/colors.dart';
@@ -44,7 +46,32 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   void initState() {
     super.initState();
     _currentCity = widget.city;
+
+    // Sync with global CartController
+    final cartController = Get.isRegistered<CartController>()
+        ? Get.find<CartController>()
+        : Get.put(CartController());
+    cartController.setCity(widget.city);
+    if (cartController.activeCity.value?.id == widget.city.id &&
+        cartController.selectedItemIds.isNotEmpty) {
+      _selectedIds.addAll(cartController.selectedItemIds);
+    }
+    _budgetController.text = cartController.budget.value.toStringAsFixed(0);
+    _startDate = cartController.startDate.value;
+    _endDate = cartController.endDate.value;
+
     _fetchLiveInventory();
+  }
+
+  void _syncCartController() {
+    if (Get.isRegistered<CartController>()) {
+      final c = Get.find<CartController>();
+      c.setCity(_currentCity);
+      c.syncItems(_selectedIds);
+      c.budget.value = _budget;
+      c.startDate.value = _startDate;
+      c.endDate.value = _endDate;
+    }
   }
 
   Future<void> _fetchLiveInventory() async {
@@ -172,22 +199,25 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   Future<void> _onPrimaryCta() async {
     if (!_canContinue) return;
     if (widget.isSolo) {
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SoloMatchesScreen(draft: _draft()),
-        ),
-      );
+      setState(() {
+        _selectedGroup = null;
+        _showSummary = true;
+      });
       return;
     }
 
-    final group = await showModalBottomSheet<SelectedGroup>(
+    SelectedGroup? group = _selectedGroup;
+    if (Get.isRegistered<GroupController>()) {
+      group ??= Get.find<GroupController>().selectedGroup.value;
+    }
+
+    group ??= await showModalBottomSheet<SelectedGroup>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const GroupPickerSheet(),
     );
+
     if (group == null) return;
     setState(() {
       _selectedGroup = group;
@@ -197,10 +227,24 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
   Future<void> _submit() async {
     final group = _selectedGroup;
-    if (group == null) return;
+    if (group == null && !widget.isSolo) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select a squad for this group trip.',
+            style: GoogleFonts.poppins(color: Colors.white),
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     final created = await TripRequestService().create(
-      groupId: group.id,
+      groupId: group?.id,
+      assignedGroupName: group?.name ??
+          (widget.isSolo ? 'Solo Explorer' : 'Travel Squad'),
       draft: _draft(),
     );
     setState(() => _submitting = false);
@@ -209,7 +253,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Could not submit trip. Try again.',
+            'Could not submit trip request. Please try again.',
             style: GoogleFonts.poppins(color: Colors.white),
           ),
           backgroundColor: AppColors.danger,
@@ -217,6 +261,12 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       );
       return;
     }
+
+    // Clear cart upon successful submission
+    if (Get.isRegistered<CartController>()) {
+      Get.find<CartController>().clearCart();
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -1139,8 +1189,20 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   Widget _buildSwiggyDishCard(CatalogItem item, IconData icon, Color accentColor) {
     final isSelected = _selectedIds.contains(item.id);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+    return InkWell(
+      onTap: () {
+        setState(() {
+          if (isSelected) {
+            _selectedIds.remove(item.id);
+          } else {
+            _selectedIds.add(item.id);
+          }
+          _syncCartController();
+        });
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -1309,6 +1371,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
                         } else {
                           _selectedIds.add(item.id);
                         }
+                        _syncCartController();
                       });
                     },
                     borderRadius: BorderRadius.circular(10),
@@ -1369,8 +1432,9 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── Checkout Summary Page View ─────────────────────────────────────────────
   Widget _buildSummaryContent() {
@@ -1418,9 +1482,9 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
               _summaryRow('Destination', widget.city.name),
               _summaryRow('Trip Mode', widget.isSolo ? 'Solo Journey' : 'Group Squad'),
-              if (group != null) _summaryRow('Assigned Group', group.name),
+              _summaryRow('Assigned Group', widget.isSolo ? 'Solo Explorer' : (group?.name ?? 'Travel Squad')),
               _summaryRow('Travel Dates', '${_fmt(_startDate)} → ${_fmt(_endDate)}'),
-              _summaryRow('Per Person Budget', '₹${_budget.toStringAsFixed(0)}'),
+              _summaryRow('Per Person Budget', '₹${_budget.toStringAsFixed(2)}'),
 
               const SizedBox(height: 16),
               Text(
