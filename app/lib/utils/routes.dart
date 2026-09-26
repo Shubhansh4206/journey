@@ -10,6 +10,7 @@ import '../screens/onboarding/profile_onboarding_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/packages_screen.dart';
 import '../screens/community/community_hub_screen.dart';
+import '../screens/groups_nav_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/main_layout.dart';
 import '../screens/pending_invites_screen.dart';
@@ -17,6 +18,7 @@ import '../screens/create_group_screen.dart';
 import '../screens/group_detail_screen.dart';
 import '../screens/itinerary_cart_screen.dart';
 import '../services/profile_service.dart';
+import '../services/travel_mode_service.dart';
 
 /// ── App Router ──────────────────────────────────────────────────────────────
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,6 +71,10 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const CreateGroupScreen(),
     ),
     GoRoute(
+      path: '/groups',
+      builder: (context, state) => const GroupsNavScreen(),
+    ),
+    GoRoute(
       path: '/group/:id',
       builder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
@@ -113,7 +119,14 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/solo_comm',
-              builder: (context, state) => const CommunityHubScreen(),
+              builder: (context, state) => ValueListenableBuilder<bool>(
+                valueListenable: TravelModeService.isSoloNotifier,
+                builder: (context, isSolo, _) {
+                  return isSolo
+                      ? const CommunityHubScreen()
+                      : const GroupsNavScreen();
+                },
+              ),
             ),
           ],
         ),

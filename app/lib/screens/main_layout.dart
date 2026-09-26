@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/travel_mode_service.dart';
 import '../utils/colors.dart';
 
 class MainLayout extends StatelessWidget {
@@ -21,49 +22,56 @@ class MainLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: Container(
-        height: 70, // Keep height consistent, safe area applied via child
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            )
-          ],
-        ),
-        child: SafeArea(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNavItem(
-                icon: Icons.home_rounded,
-                index: 0,
-                label: 'Home',
-                currentIndex: navigationShell.currentIndex,
+      bottomNavigationBar: ValueListenableBuilder<bool>(
+        valueListenable: TravelModeService.isSoloNotifier,
+        builder: (context, isSolo, _) {
+          return Container(
+            height: 70, // Keep height consistent, safe area applied via child
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                )
+              ],
+            ),
+            child: SafeArea(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildNavItem(
+                    icon: Icons.home_rounded,
+                    index: 0,
+                    label: 'Home',
+                    currentIndex: navigationShell.currentIndex,
+                  ),
+                  _buildNavItem(
+                    icon: Icons.explore_rounded,
+                    index: 1,
+                    label: 'Packages',
+                    currentIndex: navigationShell.currentIndex,
+                  ),
+                  _buildNavItem(
+                    icon: isSolo
+                        ? Icons.auto_awesome_rounded
+                        : Icons.groups_rounded,
+                    index: 2,
+                    label: isSolo ? 'Community' : 'Groups',
+                    currentIndex: navigationShell.currentIndex,
+                  ),
+                  _buildNavItem(
+                    icon: Icons.person_rounded,
+                    index: 3,
+                    label: 'Profile',
+                    currentIndex: navigationShell.currentIndex,
+                  ),
+                ],
               ),
-              _buildNavItem(
-                icon: Icons.explore_rounded,
-                index: 1,
-                label: 'Packages',
-                currentIndex: navigationShell.currentIndex,
-              ),
-              _buildNavItem(
-                icon: Icons.auto_awesome_rounded,
-                index: 2,
-                label: 'Community',
-                currentIndex: navigationShell.currentIndex,
-              ),
-              _buildNavItem(
-                icon: Icons.person_rounded,
-                index: 3,
-                label: 'Profile',
-                currentIndex: navigationShell.currentIndex,
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
