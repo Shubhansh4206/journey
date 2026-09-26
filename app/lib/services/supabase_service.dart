@@ -98,7 +98,7 @@ class SupabaseService {
 
     // 4. Query Transport (candidate tables: operator_transport, inventory_transports, transport)
     try {
-      final rows = await _fetchRows(['operator_transport', 'inventory_transports', 'inventory_transport', 'transports', 'transport']);
+      final rows = await _fetchRows(['operator_transport', 'inventory   _transports', 'inventory_transport', 'transports', 'transport']);
       final activeRows = rows.where((r) => r['is_active'] != false).toList();
       debugPrint('Supabase [transport]: Loaded ${activeRows.length} items (Total in DB: ${rows.length})');
 
