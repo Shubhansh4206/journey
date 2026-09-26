@@ -43,8 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!matchesSearch) return false;
 
       if (_selectedCategory == 'All') return true;
-      if (_selectedCategory == 'Mountains') {
-        return city.id == 'manali' || city.id == 'rishikesh';
+      if (_selectedCategory == 'Coastal') {
+        return city.id == 'mumbai' || city.id == 'goa';
       }
       if (_selectedCategory == 'Beaches') {
         return city.id == 'goa';
@@ -52,8 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedCategory == 'Heritage') {
         return city.id == 'jaipur' || city.id == 'udaipur';
       }
-      if (_selectedCategory == 'Wellness') {
-        return city.id == 'rishikesh' || city.id == 'udaipur';
+      if (_selectedCategory == 'Lakes') {
+        return city.id == 'udaipur';
       }
       return true;
     }).toList();
@@ -699,12 +699,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTrendingExperiences() {
     final experiences = [
       {
-        'title': 'Solang Paragliding',
-        'city': 'Manali',
-        'price': '₹2,500',
-        'icon': Icons.paragliding,
+        'title': 'Marine Drive Sunset Cruise',
+        'city': 'Mumbai',
+        'price': '₹2,200',
+        'icon': Icons.directions_boat,
         'color': const Color(0xFF2373F4),
-        'cityObj': mockCities.firstWhere((c) => c.id == 'manali'),
+        'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
       },
       {
         'title': 'Sunset Mandovi Cruise',
@@ -721,14 +721,6 @@ class _HomeScreenState extends State<HomeScreen> {
         'icon': Icons.air,
         'color': const Color(0xFF9564DD),
         'cityObj': mockCities.firstWhere((c) => c.id == 'jaipur'),
-      },
-      {
-        'title': 'White Water Rafting',
-        'city': 'Rishikesh',
-        'price': '₹1,900',
-        'icon': Icons.kayaking,
-        'color': const Color(0xFFFFD400),
-        'cityObj': mockCities.firstWhere((c) => c.id == 'rishikesh'),
       },
       {
         'title': 'Lake Pichola Sunset Boat',
@@ -873,11 +865,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCuratedPackagesSection() {
     final packages = [
       {
-        'title': 'Manali Snow & Paragliding Rush',
-        'days': '4 Days / 3 Nights',
-        'vibe': '🏔️ Adventure Thrill',
+        'title': 'Mumbai Coastal & Bollywood Vibes',
+        'days': '3 Days / 2 Nights',
+        'vibe': '🌆 Urban & Coastal',
         'badge': 'BESTSELLER',
-        'cityObj': mockCities.firstWhere((c) => c.id == 'manali'),
+        'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
       },
       {
         'title': 'Goa Sunsets, Beaches & Shacks',
@@ -892,6 +884,13 @@ class _HomeScreenState extends State<HomeScreen> {
         'vibe': '🏰 Royal Heritage',
         'badge': 'FEATURED',
         'cityObj': mockCities.firstWhere((c) => c.id == 'jaipur'),
+      },
+      {
+        'title': 'Udaipur Royal Lakes & Sunsets',
+        'days': '4 Days / 3 Nights',
+        'vibe': '⛵ Romantic Lakes',
+        'badge': 'EXCLUSIVE',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'udaipur'),
       },
     ];
 

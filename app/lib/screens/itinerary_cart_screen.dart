@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../data/mock_city_catalog.dart';
 import '../screens/group_picker_sheet.dart';
 import '../screens/solo_matches_screen.dart';
+import '../services/supabase_service.dart';
 import '../services/trip_request_service.dart';
 import '../utils/colors.dart';
 
@@ -21,6 +22,10 @@ class ItineraryCartScreen extends StatefulWidget {
 }
 
 class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
+  late CityCatalog _currentCity;
+  bool _loadingInventory = true;
+  bool _hasLiveOperatorData = false;
+
   final Set<String> _selectedIds = {};
   final TextEditingController _budgetController =
       TextEditingController(text: '15000');
@@ -31,14 +36,57 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   bool _submitting = false;
 
   // Swiggy style category filters
-  String _selectedCategory = 'All'; // 'All', 'Hotels', 'Activities', 'Places'
+  String _selectedCategory = 'All'; // 'All', 'Hotels', 'Activities', 'Places', 'Transport'
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  @override
+  void initState() {
+    super.initState();
+    _currentCity = widget.city;
+    _fetchLiveInventory();
+  }
+
+  Future<void> _fetchLiveInventory() async {
+    try {
+      final inventory =
+          await SupabaseService().fetchInventoryForCity(widget.city.name);
+
+      final dbHotels = inventory['hotels'] ?? [];
+      final dbActivities = inventory['activities'] ?? [];
+      final dbPlaces = inventory['places'] ?? [];
+      final dbTransport = inventory['transport'] ?? [];
+
+      final hasData = dbHotels.isNotEmpty ||
+          dbActivities.isNotEmpty ||
+          dbPlaces.isNotEmpty ||
+          dbTransport.isNotEmpty;
+
+      if (mounted) {
+        setState(() {
+          _currentCity = _currentCity.copyWith(
+            hotels: dbHotels,
+            activities: dbActivities,
+            places: dbPlaces,
+            transport: dbTransport,
+          );
+          _hasLiveOperatorData = hasData;
+          _loadingInventory = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading operator inventory: $e');
+      if (mounted) {
+        setState(() => _loadingInventory = false);
+      }
+    }
+  }
+
   List<CatalogItem> get _allItems => [
-        ...widget.city.hotels,
-        ...widget.city.activities,
-        ...widget.city.places,
+        ..._currentCity.hotels,
+        ..._currentCity.activities,
+        ..._currentCity.places,
+        ..._currentCity.transport,
       ];
 
   List<CatalogItem> get _selectedItems =>
@@ -58,7 +106,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
   TripCartDraft _draft() {
     return TripCartDraft(
-      city: widget.city,
+      city: _currentCity,
       items: _selectedItems,
       budget: _budget,
       startDate: _startDate,
@@ -718,21 +766,35 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF7ED), Color(0xFFFFF1F2)],
+        gradient: LinearGradient(
+          colors: _hasLiveOperatorData
+              ? [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)]
+              : [const Color(0xFFFFF7ED), const Color(0xFFFFF1F2)],
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFFEDD5)),
+        border: Border.all(
+          color: _hasLiveOperatorData
+              ? const Color(0xFFBBF7D0)
+              : const Color(0xFFFFEDD5),
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFC8019),
+            decoration: BoxDecoration(
+              color: _hasLiveOperatorData
+                  ? const Color(0xFF16A34A)
+                  : const Color(0xFFFC8019),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.local_offer, color: Colors.white, size: 16),
+            child: Icon(
+              _hasLiveOperatorData
+                  ? Icons.bolt_rounded
+                  : Icons.local_offer,
+              color: Colors.white,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -740,16 +802,22 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'MUST-HAVES PACK DISCOUNT',
+                  _hasLiveOperatorData
+                      ? '⚡ LIVE OPERATOR INVENTORY'
+                      : 'MUST-HAVES PACK DISCOUNT',
                   style: GoogleFonts.poppins(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFFFC8019),
+                    color: _hasLiveOperatorData
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFFC8019),
                     letterSpacing: 0.5,
                   ),
                 ),
                 Text(
-                  'Add 1 Stay + 2 Activities to unlock up to 20% operator discounts!',
+                  _hasLiveOperatorData
+                      ? 'Showing real-time stays, activities, places & transport from verified operators.'
+                      : 'Add 1 Stay + 2 Activities to unlock up to 20% operator discounts!',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -768,9 +836,10 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   Widget _buildCategoryTabs() {
     final categories = [
       {'name': 'All', 'icon': Icons.space_dashboard_outlined, 'count': _allItems.length},
-      {'name': 'Hotels', 'icon': Icons.hotel_outlined, 'count': widget.city.hotels.length},
-      {'name': 'Activities', 'icon': Icons.hiking, 'count': widget.city.activities.length},
-      {'name': 'Places', 'icon': Icons.place_outlined, 'count': widget.city.places.length},
+      {'name': 'Hotels', 'icon': Icons.hotel_outlined, 'count': _currentCity.hotels.length},
+      {'name': 'Activities', 'icon': Icons.hiking, 'count': _currentCity.activities.length},
+      {'name': 'Places', 'icon': Icons.place_outlined, 'count': _currentCity.places.length},
+      {'name': 'Transport', 'icon': Icons.directions_car_rounded, 'count': _currentCity.transport.length},
     ];
 
     return SizedBox(
@@ -863,7 +932,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
         controller: _searchController,
         onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
         decoration: InputDecoration(
-          hintText: 'Search stays, activities, places...',
+          hintText: 'Search stays, activities, places, rides...',
           hintStyle: GoogleFonts.poppins(fontSize: 13, color: AppColors.textMuted),
           prefixIcon: const Icon(Icons.search, color: Color(0xFFFC8019), size: 20),
           suffixIcon: _searchQuery.isNotEmpty
@@ -897,14 +966,109 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
   // ── Swiggy Catalog List View ──────────────────────────────────────────────
   Widget _buildCatalogList() {
+    if (_loadingInventory) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFFFC8019),
+          ),
+        ),
+      );
+    }
+
+    if (_allItems.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.travel_explore_outlined,
+                size: 48, color: Color(0xFFFC8019)),
+            const SizedBox(height: 12),
+            Text(
+              'No Operator Packages Found',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkCharcoal,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Local tour operators have not listed inventory for ${_currentCity.name} in the database yet.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final categoryItems = _selectedCategory == 'Hotels'
+        ? _currentCity.hotels
+        : (_selectedCategory == 'Activities'
+            ? _currentCity.activities
+            : (_selectedCategory == 'Places'
+                ? _currentCity.places
+                : (_selectedCategory == 'Transport'
+                    ? _currentCity.transport
+                    : _allItems)));
+
+    if (_selectedCategory != 'All' && categoryItems.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.inventory_2_outlined,
+                size: 40, color: AppColors.textMuted),
+            const SizedBox(height: 12),
+            Text(
+              'No $_selectedCategory Listed',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkCharcoal,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'No $_selectedCategory currently in database for ${_currentCity.name}.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         if (_selectedCategory == 'All' || _selectedCategory == 'Hotels')
-          _buildSwiggySection('Hotels & Stays', widget.city.hotels, Icons.hotel_rounded, const Color(0xFF2373F4)),
+          _buildSwiggySection('Hotels & Stays', _currentCity.hotels, Icons.hotel_rounded, const Color(0xFF2373F4)),
         if (_selectedCategory == 'All' || _selectedCategory == 'Activities')
-          _buildSwiggySection('Activities & Thrills', widget.city.activities, Icons.hiking, const Color(0xFF9564DD)),
+          _buildSwiggySection('Activities & Thrills', _currentCity.activities, Icons.hiking, const Color(0xFF9564DD)),
         if (_selectedCategory == 'All' || _selectedCategory == 'Places')
-          _buildSwiggySection('Must-Visit Attractions', widget.city.places, Icons.place_rounded, const Color(0xFFFF0052)),
+          _buildSwiggySection('Must-Visit Attractions', _currentCity.places, Icons.place_rounded, const Color(0xFFFF0052)),
+        if (_selectedCategory == 'All' || _selectedCategory == 'Transport')
+          _buildSwiggySection('Transport & Transfers', _currentCity.transport, Icons.directions_car_rounded, const Color(0xFF10B981)),
       ],
     );
   }

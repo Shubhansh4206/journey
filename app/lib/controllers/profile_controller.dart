@@ -98,36 +98,39 @@ class ProfileController extends GetxController {
       phoneController.text = metaPhone;
     }
 
-    try {
-      final data = await Supabase.instance.client
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
+    for (final table in ['user_profiles', 'profiles', 'users']) {
+      try {
+        final data = await Supabase.instance.client
+            .from(table)
+            .select()
+            .eq('id', user.id)
+            .maybeSingle();
 
-      if (data != null) {
-        final existing = UserProfile.fromJson(data);
-        if (existing.fullName.isNotEmpty) {
-          fullNameController.text = existing.fullName;
+        if (data != null) {
+          final existing = UserProfile.fromJson(data);
+          if (existing.fullName.isNotEmpty) {
+            fullNameController.text = existing.fullName;
+          }
+          if (existing.age != null) {
+            ageController.text = existing.age.toString();
+          }
+          if (existing.phoneNumber != null) {
+            phoneController.text = existing.phoneNumber!;
+          }
+          selectedGender.value = existing.gender;
+          selectedTravelExperience.value = existing.travelExperience;
+          selectedEnvironmentPreferences
+              .assignAll(existing.environmentPreferences);
+          selectedAccommodationStandard
+              .assignAll(existing.accommodationStandard);
+          selectedDietaryNeeds.assignAll(existing.dietaryNeeds);
+          isSmoker.value = existing.isSmoker;
+          isDrinker.value = existing.isDrinker;
+          break;
         }
-        if (existing.age != null) {
-          ageController.text = existing.age.toString();
-        }
-        if (existing.phoneNumber != null) {
-          phoneController.text = existing.phoneNumber!;
-        }
-        selectedGender.value = existing.gender;
-        selectedTravelExperience.value = existing.travelExperience;
-        selectedEnvironmentPreferences
-            .assignAll(existing.environmentPreferences);
-        selectedAccommodationStandard
-            .assignAll(existing.accommodationStandard);
-        selectedDietaryNeeds.assignAll(existing.dietaryNeeds);
-        isSmoker.value = existing.isSmoker;
-        isDrinker.value = existing.isDrinker;
+      } catch (_) {
+        // Continue trying fallback tables
       }
-    } catch (e) {
-      debugPrint('Notice: Error loading existing profile: $e');
     }
   }
 
@@ -162,7 +165,7 @@ class ProfileController extends GetxController {
     }
   }
 
-  /// Saves the user profile to Supabase 'profiles' table
+  /// Saves the user profile to Supabase 'user_profiles' / 'profiles' table
   Future<bool> saveProfile(UserProfile profile) async {
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) {
@@ -179,19 +182,22 @@ class ProfileController extends GetxController {
       final payload = profile.toJson();
       debugPrint('Saving profile to Supabase: $payload');
 
-      // Upsert profile data into the Supabase 'profiles' table
-      await Supabase.instance.client.from('profiles').upsert(payload);
-
-      debugPrint('Profile successfully saved to Supabase!');
-      return true;
-    } on PostgrestException catch (e) {
-      debugPrint('Supabase PostgrestException: ${e.message} (details: ${e.details}, code: ${e.code})');
-      if (e.code == '42501' || e.message.toLowerCase().contains('policy') || e.message.toLowerCase().contains('permission')) {
-        errorMessage.value =
-            'Database permission denied: Please make sure your Supabase "profiles" table has an INSERT/UPDATE RLS policy enabled for authenticated users.';
-      } else {
-        errorMessage.value = 'Database error: ${e.message}';
+      // Try candidate tables in order: user_profiles, profiles, users
+      for (final table in ['user_profiles', 'profiles', 'users']) {
+        try {
+          await Supabase.instance.client.from(table).upsert(payload);
+          debugPrint('Profile successfully saved to Supabase table "$table"!');
+          return true;
+        } catch (e) {
+          final err = e.toString();
+          if (err.contains('PGRST205') || err.contains('42P01') || err.contains('not find the table')) {
+            continue;
+          }
+          debugPrint('Notice on table "$table": $e');
+        }
       }
+
+      errorMessage.value = 'Failed to save profile. Please check Supabase table permissions.';
       return false;
     } catch (error) {
       debugPrint('General error saving profile: $error');
