@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../controllers/group_controller.dart';
 import '../utils/colors.dart';
 import '../services/group_service.dart';
 
@@ -133,7 +131,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           final ok = await _groupService.sendInvite(
             groupId: group.id,
             userId: targetUserId,
-            groupName: group.name,
+            groupName: groupName,
           );
           if (ok) {
             sentCount++;
@@ -150,10 +148,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     setState(() => _isCreating = false);
 
     if (mounted) {
-      if (Get.isRegistered<GroupController>()) {
-        Get.find<GroupController>().fetchUserGroups();
-      }
-
       _showSnack(
         'Group "$groupName" created! $sentCount invite(s) sent.',
         isSuccess: true,
