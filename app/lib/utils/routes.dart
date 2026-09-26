@@ -6,7 +6,7 @@ import '../screens/auth/register_screen.dart';
 import '../screens/onboarding/profile_onboarding_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/packages_screen.dart';
-import '../screens/solo_comm_screen.dart';
+import '../screens/community/community_hub_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/main_layout.dart';
 import '../screens/pending_invites_screen.dart';
@@ -99,7 +99,7 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/solo_comm',
-              builder: (context, state) => const SoloCommScreen(),
+              builder: (context, state) => const CommunityHubScreen(),
             ),
           ],
         ),

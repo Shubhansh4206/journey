@@ -356,7 +356,7 @@ class GroupService {
     }
   }
 
-  /// Get pending invites for user (returns List<Map<String, dynamic>> for pending_invites_screen.dart)
+  /// Get pending invites for user (returns `List<Map<String, dynamic>>` for pending_invites_screen.dart)
   Future<List<Map<String, dynamic>>> getPendingInvites(String userId) async {
     try {
       final invites = await _supabase

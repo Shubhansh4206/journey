@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../data/mock_city_catalog.dart';
 import '../screens/group_picker_sheet.dart';
 import '../screens/solo_matches_screen.dart';
+import '../services/ai_community_service.dart';
 import '../services/supabase_service.dart';
 import '../services/trip_request_service.dart';
 import '../utils/colors.dart';
@@ -169,9 +170,30 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
     });
   }
 
+  Future<void> _pinAsSoloPostIt() async {
+    if (!_canContinue) return;
+    await AiCommunityService().saveTripPostIt(_draft());
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '📌 Pinned as Solo Post-It! Our AI is clustering you with compatible travelers.',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: const Color(0xFF8B5CF6),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
   Future<void> _onPrimaryCta() async {
     if (!_canContinue) return;
     if (widget.isSolo) {
+      // Auto-record post-it draft for AI aggregation
+      AiCommunityService().saveTripPostIt(_draft());
+
       if (!mounted) return;
       Navigator.push(
         context,
@@ -1642,52 +1664,74 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
               ),
 
               // Right side CTA button
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: !_canContinue || _submitting
-                      ? null
-                      : (_showSummary ? _submit : _onPrimaryCta),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFC8019),
-                    disabledBackgroundColor: Colors.white24,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.isSolo && !_showSummary) ...[
+                    Container(
+                      height: 48,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF8B5CF6)),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.push_pin_rounded,
+                            color: Color(0xFFA78BFA), size: 20),
+                        tooltip: 'Pin as Solo Post-It',
+                        onPressed: _canContinue ? _pinAsSoloPostIt : null,
+                      ),
                     ),
-                    elevation: 4,
-                    shadowColor: const Color(0xFFFC8019).withValues(alpha: 0.5),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Row(
-                          children: [
-                            Text(
-                              _showSummary
-                                  ? 'SUBMIT TRIP'
-                                  : (widget.isSolo
-                                      ? 'FIND MATCHES'
-                                      : 'CHOOSE GROUP'),
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.arrow_forward_rounded,
-                                color: Colors.white, size: 16),
-                          ],
+                  ],
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: !_canContinue || _submitting
+                          ? null
+                          : (_showSummary ? _submit : _onPrimaryCta),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFC8019),
+                        disabledBackgroundColor: Colors.white24,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                ),
+                        elevation: 4,
+                        shadowColor: const Color(0xFFFC8019).withValues(alpha: 0.5),
+                      ),
+                      child: _submitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Row(
+                              children: [
+                                Text(
+                                  _showSummary
+                                      ? 'SUBMIT TRIP'
+                                      : (widget.isSolo
+                                          ? 'FIND MATCHES'
+                                          : 'CHOOSE GROUP'),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.arrow_forward_rounded,
+                                    color: Colors.white, size: 16),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

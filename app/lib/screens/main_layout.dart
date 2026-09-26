@@ -50,9 +50,9 @@ class MainLayout extends StatelessWidget {
                 currentIndex: navigationShell.currentIndex,
               ),
               _buildNavItem(
-                icon: Icons.groups_rounded,
+                icon: Icons.auto_awesome_rounded,
                 index: 2,
-                label: 'Solo Comm',
+                label: 'Community',
                 currentIndex: navigationShell.currentIndex,
               ),
               _buildNavItem(
