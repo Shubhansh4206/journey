@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/group_models.dart';
 import '../services/group_service.dart';
 
@@ -29,6 +30,7 @@ class _GroupManageViewState extends State<GroupManageView> {
   bool _isLoading = true;
   bool _isInviting = false;
   String? _errorMessage;
+  RealtimeChannel? _groupChannel;
 
   String? get _currentUserId => _groupService.currentUserId;
   bool get _isLeader => _group != null && _currentUserId != null && _group!.leaderId == _currentUserId;
@@ -37,10 +39,69 @@ class _GroupManageViewState extends State<GroupManageView> {
   void initState() {
     super.initState();
     _loadGroupData();
+    _setupGroupRealtime();
+  }
+
+  void _setupGroupRealtime() {
+    try {
+      _groupChannel = Supabase.instance.client
+          .channel('public:group_manage_${widget.groupId}')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'group_members',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'group_id',
+              value: widget.groupId,
+            ),
+            callback: (payload) {
+              if (mounted) {
+                _reloadGroupDataSilently();
+                widget.onGroupUpdated?.call();
+              }
+            },
+          )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'groups',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id',
+              value: widget.groupId,
+            ),
+            callback: (payload) {
+              if (mounted) {
+                _reloadGroupDataSilently();
+                widget.onGroupUpdated?.call();
+              }
+            },
+          )
+          .subscribe();
+    } catch (e) {
+      debugPrint('GroupManageView realtime error: $e');
+    }
+  }
+
+  Future<void> _reloadGroupDataSilently() async {
+    try {
+      final group = await _groupService.getGroupDetails(widget.groupId);
+      final members = await _groupService.getGroupMemberItems(widget.groupId);
+      if (mounted) {
+        setState(() {
+          _group = group;
+          _members = members;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    if (_groupChannel != null) {
+      Supabase.instance.client.removeChannel(_groupChannel!);
+    }
     _emailController.dispose();
     super.dispose();
   }
@@ -102,7 +163,11 @@ class _GroupManageViewState extends State<GroupManageView> {
       }
 
       // 2. Dispatch invitation
-      await _groupService.sendInvite(groupId: widget.groupId, userId: user.id);
+      await _groupService.sendInvite(
+        groupId: widget.groupId,
+        userId: user.id,
+        groupName: _group?.name,
+      );
       _emailController.clear();
       if (mounted) {
         FocusScope.of(context).unfocus();
@@ -305,7 +370,13 @@ class _GroupManageViewState extends State<GroupManageView> {
             _buildHeaderCard(),
             const SizedBox(height: 16),
 
-            // ── 2. Invite Section (Leader Only) ──────────────────────────
+            // ── 2. Solo Explorer Settings (Leader Only) ───────────────────
+            if (_isLeader) ...[
+              _buildSoloSettingsSection(),
+              const SizedBox(height: 16),
+            ],
+
+            // ── 3. Invite Section (Leader Only) ──────────────────────────
             if (_isLeader) ...[
               _buildInviteSection(),
               const SizedBox(height: 20),
@@ -371,16 +442,126 @@ class _GroupManageViewState extends State<GroupManageView> {
                         ),
                     ],
                   ),
-                  Text(
-                    '${_members.length} Member${_members.length == 1 ? '' : 's'}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.indigo.shade900.withValues(alpha: 0.7),
-                      fontWeight: FontWeight.w500,
-                    ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        '${_members.length} Member${_members.length == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.indigo.shade900.withValues(alpha: 0.7),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (_group!.openToSolos) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrange.shade100.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.deepOrange.shade300),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.travel_explore_rounded, size: 12, color: Colors.deepOrange.shade800),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Open to Solos',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.deepOrange.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSoloSettingsSection() {
+    final isOpen = _group?.openToSolos ?? false;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isOpen ? Colors.deepOrange.shade200 : Colors.grey.shade200,
+        ),
+      ),
+      color: isOpen ? Colors.deepOrange.shade50.withValues(alpha: 0.35) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isOpen ? Colors.deepOrange.shade100 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.travel_explore_rounded,
+                color: isOpen ? Colors.deepOrange.shade700 : Colors.grey.shade600,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Open to Solo Travelers',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isOpen
+                        ? 'Solo explorers can discover and join this squad.'
+                        : 'Allow solo travelers to discover and request to join.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: isOpen,
+              activeThumbColor: Colors.deepOrange,
+              onChanged: (newVal) async {
+                final updated = await _groupService.updateGroupSoloSettings(
+                  groupId: widget.groupId,
+                  openToSolos: newVal,
+                );
+                if (updated) {
+                  setState(() {
+                    _group = _group?.copyWith(openToSolos: newVal);
+                  });
+                  widget.onGroupUpdated?.call();
+                  _showSnackBar(
+                    newVal
+                        ? 'Group is now open to solo travelers!'
+                        : 'Group is now private to invited members.',
+                  );
+                } else {
+                  _showSnackBar('Failed to update solo settings', isError: true);
+                }
+              },
             ),
           ],
         ),

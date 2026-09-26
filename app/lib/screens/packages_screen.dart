@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../data/mock_city_catalog.dart';
 import '../utils/colors.dart';
+import 'itinerary_cart_screen.dart';
 
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
@@ -329,29 +331,49 @@ class ExploreScreen extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.electricBlue,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  'Explore',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                          InkWell(
+                            onTap: () {
+                              final title = (item['title'] as String).toLowerCase();
+                              CityCatalog city = mockCities.first;
+                              if (title.contains('goa')) {
+                                city = mockCities.firstWhere((c) => c.id == 'goa', orElse: () => mockCities.first);
+                              } else if (title.contains('manali')) {
+                                city = mockCities.firstWhere((c) => c.id == 'manali', orElse: () => mockCities.first);
+                              } else if (title.contains('udaipur')) {
+                                city = mockCities.firstWhere((c) => c.id == 'udaipur', orElse: () => mockCities.first);
+                              }
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ItineraryCartScreen(city: city, isSolo: false),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.electricBlue,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Explore',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

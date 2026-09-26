@@ -14,9 +14,11 @@ class GroupService {
   Future<GroupData?> createGroup({
     required String name,
     String? leaderId,
+    bool openToSolos = false,
+    int maxSoloSeats = 0,
   }) async {
     final effectiveLeaderId = leaderId ?? currentUserId;
-    debugPrint('🚀 [GroupService.createGroup] Starting: name="$name", leaderId=$effectiveLeaderId');
+    debugPrint('🚀 [GroupService.createGroup] Starting: name="$name", leaderId=$effectiveLeaderId, openToSolos=$openToSolos');
 
     if (name.trim().isEmpty) {
       debugPrint('❌ [GroupService.createGroup] Empty group name');
@@ -33,8 +35,8 @@ class GroupService {
       final groupRow = await _supabase.from('groups').insert({
         'name': name.trim(),
         'leader_id': effectiveLeaderId,
-        'open_to_solos': false,
-        'max_solo_seats': 0,
+        'open_to_solos': openToSolos,
+        'max_solo_seats': maxSoloSeats,
       }).select().single();
 
       debugPrint('✅ [GroupService.createGroup] Group inserted: $groupRow');
@@ -109,6 +111,8 @@ class GroupService {
   Future<bool> sendInvite({
     required String groupId,
     required String userId,
+    String? groupName,
+    String? inviterName,
   }) async {
     final inviterId = currentUserId;
     debugPrint('💌 [GroupService.sendInvite] Starting: groupId=$groupId, inviterId=$inviterId, inviteeId=$userId');
@@ -148,13 +152,33 @@ class GroupService {
         throw Exception('An active invitation has already been sent to this user.');
       }
 
+      // Resolve group_name if not provided
+      String? resolvedGroupName = groupName;
+      if (resolvedGroupName == null || resolvedGroupName.isEmpty) {
+        try {
+          final g = await _supabase.from('groups').select('name').eq('id', groupId).maybeSingle();
+          resolvedGroupName = g?['name'] as String?;
+        } catch (_) {}
+      }
+
+      // Resolve inviter_name if not provided
+      String? resolvedInviterName = inviterName;
+      if (resolvedInviterName == null || resolvedInviterName.isEmpty) {
+        try {
+          final p = await _supabase.from('user_profiles').select('full_name').eq('id', inviterId).maybeSingle();
+          resolvedInviterName = p?['full_name'] as String?;
+        } catch (_) {}
+      }
+
       // Insert into group_invitations
-      debugPrint('⏳ [GroupService.sendInvite] Inserting into `group_invitations` table...');
+      debugPrint('⏳ [GroupService.sendInvite] Inserting into `group_invitations` table with group_name="$resolvedGroupName", inviter_name="$resolvedInviterName"...');
       final insertResult = await _supabase.from('group_invitations').insert({
         'group_id': groupId,
         'inviter_id': inviterId,
         'invitee_id': userId,
         'status': 'pending',
+        'group_name': ?resolvedGroupName,
+        'inviter_name': ?resolvedInviterName,
       }).select();
 
       debugPrint('✅ [GroupService.sendInvite] Invitation inserted successfully: $insertResult');
@@ -421,6 +445,8 @@ class GroupService {
             invitee_id,
             status,
             created_at,
+            group_name,
+            inviter_name,
             groups (
               id,
               name
@@ -442,7 +468,7 @@ class GroupService {
       try {
         final invitesData = await _supabase
             .from('group_invitations')
-            .select('id, group_id, inviter_id, invitee_id, status, created_at')
+            .select('id, group_id, inviter_id, invitee_id, status, created_at, group_name, inviter_name')
             .eq('invitee_id', userId)
             .eq('status', 'pending');
 
@@ -451,23 +477,24 @@ class GroupService {
           final gId = inv['group_id'] as String;
           final inviterId = inv['inviter_id'] as String;
 
-          String groupName = 'Group';
-          String inviterName = 'Travel Leader';
+          String groupName = inv['group_name'] ?? 'Group';
+          String inviterName = inv['inviter_name'] ?? 'Travel Leader';
 
-          try {
-            final g = await _supabase.from('groups').select('name').eq('id', gId).maybeSingle();
-            if (g != null && g['name'] != null) groupName = g['name'];
-          } catch (_) {}
+          if (groupName == 'Group') {
+            try {
+              final g = await _supabase.from('groups').select('name').eq('id', gId).maybeSingle();
+              if (g != null && g['name'] != null) groupName = g['name'];
+            } catch (_) {}
+          }
 
-          try {
-            final p = await _supabase.from('user_profiles').select('full_name').eq('id', inviterId).maybeSingle();
-            if (p != null && p['full_name'] != null) {
-              inviterName = p['full_name'];
-            } else {
-              final p2 = await _supabase.from('profiles').select('full_name').eq('id', inviterId).maybeSingle();
-              if (p2 != null && p2['full_name'] != null) inviterName = p2['full_name'];
-            }
-          } catch (_) {}
+          if (inviterName == 'Travel Leader') {
+            try {
+              final p = await _supabase.from('user_profiles').select('full_name').eq('id', inviterId).maybeSingle();
+              if (p != null && p['full_name'] != null) {
+                inviterName = p['full_name'];
+              }
+            } catch (_) {}
+          }
 
           result.add(GroupInvitationItem(
             id: inv['id'] as String,
@@ -484,6 +511,27 @@ class GroupService {
       } catch (fallbackErr) {
         return [];
       }
+    }
+  }
+
+  /// Helper: Get all groups user belongs to, joined with all members for roster display
+  Future<List<Map<String, dynamic>>> getUserGroupsWithMembers(String userId) async {
+    try {
+      final memberships = await getUserGroups(userId);
+      final List<Map<String, dynamic>> enriched = [];
+
+      for (final m in memberships) {
+        final gId = m['group_id'] as String;
+        final members = await getGroupMemberItems(gId);
+        final copy = Map<String, dynamic>.from(m);
+        copy['members'] = members;
+        copy['member_count'] = members.length;
+        enriched.add(copy);
+      }
+      return enriched;
+    } catch (e) {
+      debugPrint('getUserGroupsWithMembers error: $e');
+      return [];
     }
   }
 
@@ -535,5 +583,30 @@ class GroupService {
   Future<List<GroupMemberItem>> getGroupMemberItems(String groupId) async {
     final rawMembers = await getGroupMembers(groupId);
     return rawMembers.map((m) => GroupMemberItem.fromJson(m)).toList();
+  }
+
+  /// Toggle or update solo traveler settings for a group
+  Future<bool> updateGroupSoloSettings({
+    required String groupId,
+    required bool openToSolos,
+    int? maxSoloSeats,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'open_to_solos': openToSolos,
+        'max_solo_seats': ?maxSoloSeats,
+      };
+
+      await _supabase
+          .from('groups')
+          .update(updates)
+          .eq('id', groupId);
+
+      debugPrint('✅ [GroupService.updateGroupSoloSettings] Group $groupId updated: $updates');
+      return true;
+    } catch (e, stack) {
+      debugPrint('❌ [GroupService.updateGroupSoloSettings] Error: $e\n$stack');
+      return false;
+    }
   }
 }

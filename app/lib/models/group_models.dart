@@ -71,6 +71,24 @@ class GroupData {
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
     };
   }
+
+  GroupData copyWith({
+    String? id,
+    String? leaderId,
+    String? name,
+    bool? openToSolos,
+    int? maxSoloSeats,
+    DateTime? createdAt,
+  }) {
+    return GroupData(
+      id: id ?? this.id,
+      leaderId: leaderId ?? this.leaderId,
+      name: name ?? this.name,
+      openToSolos: openToSolos ?? this.openToSolos,
+      maxSoloSeats: maxSoloSeats ?? this.maxSoloSeats,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 /// Alias for compatibility
@@ -157,14 +175,21 @@ class GroupInvitationItem {
         json['profiles'] as Map<String, dynamic>? ??
         {};
 
+    final resolvedGroupName = json['group_name'] as String? ??
+        group['name'] as String? ??
+        'Unknown Group';
+
+    final resolvedInviterName = json['inviter_name'] as String? ??
+        inviter['full_name'] as String? ??
+        inviter['name'] as String? ??
+        'Group Leader';
+
     return GroupInvitationItem(
       id: json['id'] as String? ?? '',
       groupId: json['group_id'] as String? ?? '',
-      groupName: group['name'] as String? ?? 'Unknown Group',
+      groupName: resolvedGroupName,
       inviterId: json['inviter_id'] as String? ?? '',
-      inviterName: inviter['full_name'] as String? ??
-          inviter['name'] as String? ??
-          'Group Leader',
+      inviterName: resolvedInviterName,
       inviteeId: json['invitee_id'] as String? ??
           json['solo_user_id'] as String? ??
           '',

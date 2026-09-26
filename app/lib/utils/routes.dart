@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../controllers/cart_controller.dart';
+import '../data/mock_city_catalog.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/onboarding/profile_onboarding_screen.dart';
@@ -12,6 +15,7 @@ import '../screens/main_layout.dart';
 import '../screens/pending_invites_screen.dart';
 import '../screens/create_group_screen.dart';
 import '../screens/group_detail_screen.dart';
+import '../screens/itinerary_cart_screen.dart';
 import '../services/profile_service.dart';
 
 /// ── App Router ──────────────────────────────────────────────────────────────
@@ -69,6 +73,16 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
         return GroupDetailScreen(groupId: id);
+      },
+    ),
+    GoRoute(
+      path: '/cart',
+      builder: (context, state) {
+        final cartController = Get.isRegistered<CartController>()
+            ? Get.find<CartController>()
+            : Get.put(CartController());
+        final city = cartController.activeCity.value ?? mockCities.first;
+        return ItineraryCartScreen(city: city, isSolo: false);
       },
     ),
     StatefulShellRoute.indexedStack(

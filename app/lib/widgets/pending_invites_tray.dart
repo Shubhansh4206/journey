@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/group_models.dart';
 import '../services/group_service.dart';
 
@@ -29,11 +30,42 @@ class _PendingInvitesTrayState extends State<PendingInvitesTray> {
   final GroupService _groupService = GroupService();
   late Future<List<GroupInvitationItem>> _invitesFuture;
   final Set<String> _processingIds = {};
+  RealtimeChannel? _trayChannel;
 
   @override
   void initState() {
     super.initState();
     _fetchInvites();
+    _setupRealtime();
+  }
+
+  void _setupRealtime() {
+    try {
+      _trayChannel = Supabase.instance.client
+          .channel('public:pending_invites_tray_realtime')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'group_invitations',
+            callback: (payload) {
+              if (mounted) {
+                _fetchInvites();
+                widget.onInvitesChanged?.call();
+              }
+            },
+          )
+          .subscribe();
+    } catch (e) {
+      debugPrint('PendingInvitesTray realtime error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_trayChannel != null) {
+      Supabase.instance.client.removeChannel(_trayChannel!);
+    }
+    super.dispose();
   }
 
   void _fetchInvites() {
