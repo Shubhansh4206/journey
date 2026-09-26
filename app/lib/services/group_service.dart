@@ -1,86 +1,224 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/trip_group.dart';
+import '../models/group_models.dart';
 
 class GroupService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
 
-  /// Look up a user by email using an RPC function that reads from auth.users.
-  /// Requires the `get_user_id_by_email` Postgres function to exist in Supabase.
-  Future<Map<String, dynamic>?> findUserByEmail(String email) async {
-    try {
-      final result = await _supabase.rpc(
-        'get_user_id_by_email',
-        params: {'lookup_email': email.toLowerCase()},
-      );
+  GroupService({SupabaseClient? client})
+      : _supabase = client ?? Supabase.instance.client;
 
-      // RPC returns a list of rows
-      if (result is List && result.isNotEmpty) {
-        return Map<String, dynamic>.from(result.first);
-      }
-      return null;
-    } catch (e) {
-      debugPrint('findUserByEmail RPC error: $e');
-      return null;
-    }
-  }
+  String? get currentUserId => _supabase.auth.currentUser?.id;
 
-  /// Create a new group and add the leader as a group_member
-  Future<TripGroup?> createGroup({
+  /// 1. Create a new group and add the creator as 'leader' in `group_members`
+  Future<GroupData?> createGroup({
     required String name,
-    required String leaderId,
+    String? leaderId,
   }) async {
+    final effectiveLeaderId = leaderId ?? currentUserId;
+    debugPrint('🚀 [GroupService.createGroup] Starting: name="$name", leaderId=$effectiveLeaderId');
+
+    if (name.trim().isEmpty) {
+      debugPrint('❌ [GroupService.createGroup] Empty group name');
+      throw Exception('Group name cannot be empty.');
+    }
+    if (effectiveLeaderId == null) {
+      debugPrint('❌ [GroupService.createGroup] No authenticated user');
+      throw Exception('User must be logged in to create a group.');
+    }
+
     try {
-      final groupData = await _supabase.from('groups').insert({
-        'leader_id': leaderId,
-        'name': name,
+      // 1. Insert into groups and retrieve created record
+      debugPrint('⏳ [GroupService.createGroup] Inserting into `groups` table...');
+      final groupRow = await _supabase.from('groups').insert({
+        'name': name.trim(),
+        'leader_id': effectiveLeaderId,
         'open_to_solos': false,
         'max_solo_seats': 0,
       }).select().single();
 
-      final group = TripGroup.fromJson(groupData);
+      debugPrint('✅ [GroupService.createGroup] Group inserted: $groupRow');
+      final createdGroup = GroupData.fromJson(groupRow);
 
-      // Add leader as group_member with role 'leader'
-      await _supabase.from('group_members').insert({
-        'group_id': group.id,
-        'user_id': leaderId,
+      // 2. Insert the creator as 'leader' in group_members
+      debugPrint('⏳ [GroupService.createGroup] Inserting leader into `group_members`...');
+      final memberRow = await _supabase.from('group_members').insert({
+        'group_id': createdGroup.id,
+        'user_id': effectiveLeaderId,
         'role': 'leader',
-      });
+      }).select();
 
-      return group;
-    } catch (e) {
-      debugPrint('createGroup error: $e');
+      debugPrint('✅ [GroupService.createGroup] Leader added to group_members: $memberRow');
+      return createdGroup;
+    } catch (e, stack) {
+      debugPrint('❌ [GroupService.createGroup] Error: $e\nStack: $stack');
       return null;
     }
   }
 
-  /// Send an invite to a user via join_requests
+  /// 2. Search for a registered user by email in `user_profiles` (typed)
+  Future<UserProfileBasic?> searchUserByEmail(String email) async {
+    final raw = await findUserByEmail(email);
+    if (raw == null) return null;
+    return UserProfileBasic.fromJson(raw);
+  }
+
+  /// Look up user by email (returns Map for backward compatibility)
+  Future<Map<String, dynamic>?> findUserByEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    debugPrint('🔍 [GroupService.findUserByEmail] Searching for email: "$cleanEmail"');
+    if (cleanEmail.isEmpty) return null;
+
+    try {
+      debugPrint('⏳ [GroupService.findUserByEmail] Querying `user_profiles` table...');
+      final data = await _supabase
+          .from('user_profiles')
+          .select('id, full_name, email')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+      if (data != null) {
+        debugPrint('✅ [GroupService.findUserByEmail] Found in `user_profiles`: $data');
+        return Map<String, dynamic>.from(data);
+      }
+      debugPrint('⚠️ [GroupService.findUserByEmail] Not found in `user_profiles` for "$cleanEmail"');
+
+      // Try RPC if defined
+      try {
+        final rpcResult = await _supabase.rpc(
+          'get_user_id_by_email',
+          params: {'lookup_email': cleanEmail},
+        );
+        if (rpcResult is List && rpcResult.isNotEmpty) {
+          debugPrint('✅ [GroupService.findUserByEmail] Found via RPC: ${rpcResult.first}');
+          return Map<String, dynamic>.from(rpcResult.first);
+        }
+      } catch (rpcErr) {
+        debugPrint('⚠️ [GroupService.findUserByEmail] RPC lookup notice: $rpcErr');
+      }
+
+      debugPrint('❌ [GroupService.findUserByEmail] No user found with email "$cleanEmail"');
+      return null;
+    } catch (e) {
+      debugPrint('❌ [GroupService.findUserByEmail] Error: $e');
+      return null;
+    }
+  }
+
+  /// 3. Send invite to invitee
   Future<bool> sendInvite({
     required String groupId,
     required String userId,
   }) async {
-    try {
-      await _supabase.from('join_requests').insert({
-        'group_id': groupId,
-        'solo_user_id': userId,
-        'status': 'pending',
-        'pitch_message': 'You have been invited to join this group!',
-      });
-      return true;
-    } catch (e) {
-      debugPrint('sendInvite error: $e');
+    final inviterId = currentUserId;
+    debugPrint('💌 [GroupService.sendInvite] Starting: groupId=$groupId, inviterId=$inviterId, inviteeId=$userId');
+
+    if (inviterId == null) {
+      debugPrint('❌ [GroupService.sendInvite] User must be logged in to send invitations.');
       return false;
+    }
+
+    try {
+      // Check if user is already in the group
+      debugPrint('⏳ [GroupService.sendInvite] Checking existing membership in group_members...');
+      final existingMember = await _supabase
+          .from('group_members')
+          .select('user_id')
+          .eq('group_id', groupId)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (existingMember != null) {
+        debugPrint('⚠️ [GroupService.sendInvite] Invitee is already a member of this group.');
+        throw Exception('User is already a member of this group.');
+      }
+
+      // Check if there is already a pending invite in group_invitations
+      debugPrint('⏳ [GroupService.sendInvite] Checking existing pending invites in group_invitations...');
+      final existingInvite = await _supabase
+          .from('group_invitations')
+          .select('id, status')
+          .eq('group_id', groupId)
+          .eq('invitee_id', userId)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+      if (existingInvite != null) {
+        debugPrint('⚠️ [GroupService.sendInvite] An active pending invite already exists: $existingInvite');
+        throw Exception('An active invitation has already been sent to this user.');
+      }
+
+      // Insert into group_invitations
+      debugPrint('⏳ [GroupService.sendInvite] Inserting into `group_invitations` table...');
+      final insertResult = await _supabase.from('group_invitations').insert({
+        'group_id': groupId,
+        'inviter_id': inviterId,
+        'invitee_id': userId,
+        'status': 'pending',
+      }).select();
+
+      debugPrint('✅ [GroupService.sendInvite] Invitation inserted successfully: $insertResult');
+      return true;
+    } on PostgrestException catch (e) {
+      debugPrint('❌ [GroupService.sendInvite] PostgrestException: code=${e.code}, msg=${e.message}, details=${e.details}, hint=${e.hint}');
+      if (e.code == '23505') {
+        throw Exception('Invitation already exists for this user.');
+      }
+      rethrow;
+    } catch (e, stack) {
+      debugPrint('❌ [GroupService.sendInvite] General error: $e\nStack: $stack');
+      rethrow;
     }
   }
 
-  /// Accept an invite: update join_request status + add to group_members
+  /// 4. Respond to invite ('accepted' or 'rejected')
+  Future<bool> respondToInvite({
+    required String inviteId,
+    required String groupId,
+    required String status,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw Exception('User must be logged in to respond to invites.');
+    }
+
+    try {
+      // Update group_invitations status
+      await _supabase
+          .from('group_invitations')
+          .update({'status': status})
+          .eq('id', inviteId);
+
+      // If accepted, add member to group_members
+      if (status.toLowerCase() == 'accepted') {
+        await _supabase.from('group_members').upsert({
+          'group_id': groupId,
+          'user_id': userId,
+          'role': 'member',
+        });
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error in respondToInvite: $e');
+      rethrow;
+    }
+  }
+
+  /// Accept invite (join_requests or group_invitations)
   Future<bool> acceptInvite(String requestId, String groupId, String userId) async {
     try {
-      await _supabase.from('join_requests')
-          .update({'status': 'accepted'})
-          .eq('id', requestId);
+      try {
+        await _supabase.from('group_invitations')
+            .update({'status': 'accepted'})
+            .eq('id', requestId);
+      } catch (_) {
+        await _supabase.from('join_requests')
+            .update({'status': 'accepted'})
+            .eq('id', requestId);
+      }
 
-      await _supabase.from('group_members').insert({
+      await _supabase.from('group_members').upsert({
         'group_id': groupId,
         'user_id': userId,
         'role': 'member',
@@ -95,9 +233,15 @@ class GroupService {
   /// Decline an invite
   Future<bool> declineInvite(String requestId) async {
     try {
-      await _supabase.from('join_requests')
-          .update({'status': 'declined'})
-          .eq('id', requestId);
+      try {
+        await _supabase.from('group_invitations')
+            .update({'status': 'rejected'})
+            .eq('id', requestId);
+      } catch (_) {
+        await _supabase.from('join_requests')
+            .update({'status': 'declined'})
+            .eq('id', requestId);
+      }
       return true;
     } catch (e) {
       debugPrint('declineInvite error: $e');
@@ -105,123 +249,36 @@ class GroupService {
     }
   }
 
-  /// Remove a member from a group (leader action)
+  /// 5. Update group name
+  Future<bool> updateGroupName(String groupId, String newName) async {
+    try {
+      await _supabase
+          .from('groups')
+          .update({'name': newName.trim()})
+          .eq('id', groupId);
+      return true;
+    } catch (e) {
+      debugPrint('Error in updateGroupName: $e');
+      return false;
+    }
+  }
+
+  /// 6. Remove member from group (leader action or member leaving)
   Future<bool> removeMember(String groupId, String userId) async {
     try {
-      await _supabase.from('group_members')
+      await _supabase
+          .from('group_members')
           .delete()
           .eq('group_id', groupId)
           .eq('user_id', userId);
       return true;
     } catch (e) {
-      debugPrint('removeMember error: $e');
+      debugPrint('Error in removeMember: $e');
       return false;
     }
   }
 
-  /// Get all groups the current user belongs to
-  Future<List<Map<String, dynamic>>> getUserGroups(String userId) async {
-    try {
-      final memberships = await _supabase
-          .from('group_members')
-          .select('group_id, role, groups(id, name, leader_id, open_to_solos, max_solo_seats, created_at)')
-          .eq('user_id', userId);
-
-      return List<Map<String, dynamic>>.from(memberships);
-    } catch (e) {
-      debugPrint('getUserGroups error: $e');
-      return [];
-    }
-  }
-
-  /// Get members of a group with their profile info + email via RPC
-  Future<List<Map<String, dynamic>>> getGroupMembers(String groupId) async {
-    try {
-      final members = await _supabase
-          .from('group_members')
-          .select('user_id, role, joined_at, profiles(id, full_name)')
-          .eq('group_id', groupId);
-
-      final memberList = List<Map<String, dynamic>>.from(members);
-      // Fetch emails via RPC for each member
-      for (var i = 0; i < memberList.length; i++) {
-        try {
-          final result = await _supabase.rpc(
-            'get_email_by_user_id',
-            params: {'lookup_id': memberList[i]['user_id']},
-          );
-          if (result is List && result.isNotEmpty) {
-            memberList[i]['email'] = result.first['email'] ?? '';
-          } else {
-            memberList[i]['email'] = '';
-          }
-        } catch (_) {
-          memberList[i]['email'] = '';
-        }
-      }
-      return memberList;
-    } catch (e) {
-      debugPrint('getGroupMembers error: $e');
-      return [];
-    }
-  }
-
-  /// Get pending invites for the current user
-  Future<List<Map<String, dynamic>>> getPendingInvites(String userId) async {
-    try {
-      final invites = await _supabase
-          .from('join_requests')
-          .select('id, group_id, status, pitch_message, created_at, groups(id, name, leader_id)')
-          .eq('solo_user_id', userId)
-          .eq('status', 'pending');
-
-      return List<Map<String, dynamic>>.from(invites);
-    } catch (e) {
-      debugPrint('getPendingInvites error: $e');
-      return [];
-    }
-  }
-
-  /// Get pending invites sent from a group (for leader view)
-  Future<List<Map<String, dynamic>>> getGroupPendingInvites(String groupId) async {
-    try {
-      final invites = await _supabase
-          .from('join_requests')
-          .select('id, solo_user_id, status, created_at')
-          .eq('group_id', groupId)
-          .eq('status', 'pending');
-
-      final inviteList = List<Map<String, dynamic>>.from(invites);
-      for (var i = 0; i < inviteList.length; i++) {
-        try {
-          final result = await _supabase.rpc(
-            'get_email_by_user_id',
-            params: {'lookup_id': inviteList[i]['solo_user_id']},
-          );
-          if (result is List && result.isNotEmpty) {
-            inviteList[i]['email'] = result.first['email'] ?? '';
-            inviteList[i]['name'] = result.first['email']?.split('@').first ?? '';
-          }
-        } catch (_) {}
-      }
-      return inviteList;
-    } catch (e) {
-      debugPrint('getGroupPendingInvites error: $e');
-      return [];
-    }
-  }
-
-  Future<bool> updateGroupName(String groupId, String name) async {
-    try {
-      await _supabase.from('groups').update({'name': name}).eq('id', groupId);
-      return true;
-    } catch (e) {
-      debugPrint('updateGroupName error: $e');
-      return false;
-    }
-  }
-
-  /// Members can leave. Leaders cannot leave (rename/delete instead).
+  /// Member leaves group (leaders cannot leave)
   Future<bool> leaveGroup({
     required String groupId,
     required String userId,
@@ -239,19 +296,14 @@ class GroupService {
         return false;
       }
 
-      await _supabase
-          .from('group_members')
-          .delete()
-          .eq('group_id', groupId)
-          .eq('user_id', userId);
-      return true;
+      return await removeMember(groupId, userId);
     } catch (e) {
       debugPrint('leaveGroup error: $e');
       return false;
     }
   }
 
-  /// Solo traveler asks to join an open squad.
+  /// Solo traveler asks to join an open squad
   Future<bool> requestToJoinGroup({
     required String groupId,
     required String userId,
@@ -271,6 +323,7 @@ class GroupService {
     }
   }
 
+  /// Join a community
   Future<bool> joinCommunity({
     required String communityId,
     required String userId,
@@ -286,5 +339,201 @@ class GroupService {
       debugPrint('joinCommunity error: $e');
       return false;
     }
+  }
+
+  /// Get all groups the user belongs to (for group_picker_sheet.dart)
+  Future<List<Map<String, dynamic>>> getUserGroups(String userId) async {
+    try {
+      final memberships = await _supabase
+          .from('group_members')
+          .select('group_id, role, groups(id, name, leader_id, open_to_solos, max_solo_seats, created_at)')
+          .eq('user_id', userId);
+
+      return List<Map<String, dynamic>>.from(memberships);
+    } catch (e) {
+      debugPrint('getUserGroups error: $e');
+      return [];
+    }
+  }
+
+  /// Get pending invites for user (returns List<Map<String, dynamic>> for pending_invites_screen.dart)
+  Future<List<Map<String, dynamic>>> getPendingInvites(String userId) async {
+    try {
+      final invites = await _supabase
+          .from('group_invitations')
+          .select('id, group_id, inviter_id, status, created_at, groups(id, name, leader_id)')
+          .eq('invitee_id', userId)
+          .eq('status', 'pending');
+
+      return List<Map<String, dynamic>>.from(invites);
+    } catch (e) {
+      try {
+        final legacyInvites = await _supabase
+            .from('join_requests')
+            .select('id, group_id, status, pitch_message, created_at, groups(id, name, leader_id)')
+            .eq('solo_user_id', userId)
+            .eq('status', 'pending');
+        return List<Map<String, dynamic>>.from(legacyInvites);
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
+  /// Get pending invites sent from a group (for leader view in group_detail_screen.dart)
+  Future<List<Map<String, dynamic>>> getGroupPendingInvites(String groupId) async {
+    try {
+      final invites = await _supabase
+          .from('group_invitations')
+          .select('id, invitee_id, status, created_at')
+          .eq('group_id', groupId)
+          .eq('status', 'pending');
+
+      final inviteList = List<Map<String, dynamic>>.from(invites);
+      for (var i = 0; i < inviteList.length; i++) {
+        try {
+          final uId = inviteList[i]['invitee_id'];
+          final p = await _supabase.from('user_profiles').select('full_name, email').eq('id', uId).maybeSingle();
+          if (p != null) {
+            inviteList[i]['email'] = p['email'] ?? '';
+            inviteList[i]['name'] = p['full_name'] ?? '';
+          }
+        } catch (_) {}
+      }
+      return inviteList;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Helper: Get all pending invites for current user as typed models
+  Future<List<GroupInvitationItem>> getPendingInvitesForCurrentUser() async {
+    final userId = currentUserId;
+    if (userId == null) return [];
+
+    try {
+      final response = await _supabase
+          .from('group_invitations')
+          .select('''
+            id,
+            group_id,
+            inviter_id,
+            invitee_id,
+            status,
+            created_at,
+            groups (
+              id,
+              name
+            ),
+            inviter:user_profiles!group_invitations_inviter_id_fkey (
+              id,
+              full_name,
+              email
+            )
+          ''')
+          .eq('invitee_id', userId)
+          .eq('status', 'pending')
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((item) => GroupInvitationItem.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      try {
+        final invitesData = await _supabase
+            .from('group_invitations')
+            .select('id, group_id, inviter_id, invitee_id, status, created_at')
+            .eq('invitee_id', userId)
+            .eq('status', 'pending');
+
+        final List<GroupInvitationItem> result = [];
+        for (final inv in (invitesData as List)) {
+          final gId = inv['group_id'] as String;
+          final inviterId = inv['inviter_id'] as String;
+
+          String groupName = 'Group';
+          String inviterName = 'Travel Leader';
+
+          try {
+            final g = await _supabase.from('groups').select('name').eq('id', gId).maybeSingle();
+            if (g != null && g['name'] != null) groupName = g['name'];
+          } catch (_) {}
+
+          try {
+            final p = await _supabase.from('user_profiles').select('full_name').eq('id', inviterId).maybeSingle();
+            if (p != null && p['full_name'] != null) {
+              inviterName = p['full_name'];
+            } else {
+              final p2 = await _supabase.from('profiles').select('full_name').eq('id', inviterId).maybeSingle();
+              if (p2 != null && p2['full_name'] != null) inviterName = p2['full_name'];
+            }
+          } catch (_) {}
+
+          result.add(GroupInvitationItem(
+            id: inv['id'] as String,
+            groupId: gId,
+            groupName: groupName,
+            inviterId: inviterId,
+            inviterName: inviterName,
+            inviteeId: userId,
+            status: inv['status'] as String? ?? 'pending',
+            createdAt: inv['created_at'] != null ? DateTime.tryParse(inv['created_at']) : null,
+          ));
+        }
+        return result;
+      } catch (fallbackErr) {
+        return [];
+      }
+    }
+  }
+
+  /// Helper: Fetch group details by ID
+  Future<GroupData?> getGroupDetails(String groupId) async {
+    try {
+      final data = await _supabase
+          .from('groups')
+          .select()
+          .eq('id', groupId)
+          .maybeSingle();
+
+      if (data == null) return null;
+      return GroupData.fromJson(data);
+    } catch (e) {
+      debugPrint('Error in getGroupDetails: $e');
+      return null;
+    }
+  }
+
+  /// Get members of a group as raw Maps (for group_detail_screen.dart)
+  Future<List<Map<String, dynamic>>> getGroupMembers(String groupId) async {
+    try {
+      final members = await _supabase
+          .from('group_members')
+          .select('user_id, role, joined_at')
+          .eq('group_id', groupId);
+
+      final memberList = List<Map<String, dynamic>>.from(members);
+      for (var i = 0; i < memberList.length; i++) {
+        try {
+          final uId = memberList[i]['user_id'];
+          final p = await _supabase.from('user_profiles').select('full_name, email').eq('id', uId).maybeSingle();
+          if (p != null) {
+            memberList[i]['full_name'] = p['full_name'] ?? '';
+            memberList[i]['email'] = p['email'] ?? '';
+            memberList[i]['profiles'] = p;
+          }
+        } catch (_) {}
+      }
+      return memberList;
+    } catch (e) {
+      debugPrint('getGroupMembers error: $e');
+      return [];
+    }
+  }
+
+  /// Helper: Fetch all members of a group as typed `GroupMemberItem`s
+  Future<List<GroupMemberItem>> getGroupMemberItems(String groupId) async {
+    final rawMembers = await getGroupMembers(groupId);
+    return rawMembers.map((m) => GroupMemberItem.fromJson(m)).toList();
   }
 }

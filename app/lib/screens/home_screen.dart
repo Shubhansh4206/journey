@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/mock_city_catalog.dart';
 import '../screens/itinerary_cart_screen.dart';
 import '../services/profile_service.dart';
+import '../services/group_service.dart';
 import '../utils/colors.dart';
 import '../widgets/travel_mode_toggle.dart';
 
@@ -16,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GroupService _groupService = GroupService();
   bool _isSolo = false;
   String _searchQuery = '';
   String _selectedCategory = 'All';
@@ -281,29 +283,53 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Row(
                 children: [
-                  Stack(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.notifications_outlined,
-                          color: AppColors.darkCharcoal,
-                          size: 24,
-                        ),
-                        onPressed: () => context.push('/invites'),
-                      ),
-                      Positioned(
-                        right: 10,
-                        top: 10,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF0052),
-                            shape: BoxShape.circle,
+                  FutureBuilder(
+                    future: _groupService.getPendingInvitesForCurrentUser(),
+                    builder: (context, snapshot) {
+                      final inviteCount = snapshot.data?.length ?? 0;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: AppColors.darkCharcoal,
+                              size: 24,
+                            ),
+                            tooltip: 'Group Invitations',
+                            onPressed: () async {
+                              await context.push('/invites');
+                              if (mounted) setState(() {});
+                            },
                           ),
-                        ),
-                      ),
-                    ],
+                          if (inviteCount > 0)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFF0052),
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  inviteCount > 9 ? '9+' : '$inviteCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

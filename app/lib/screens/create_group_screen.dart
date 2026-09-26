@@ -43,8 +43,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     }
 
     setState(() => _isSearching = true);
+    debugPrint('🔍 [CreateGroupScreen] Looking up user: $email');
 
     final user = await _groupService.findUserByEmail(email);
+    debugPrint('🔍 [CreateGroupScreen] User lookup result for $email: $user');
 
     setState(() {
       _isSearching = false;
@@ -52,10 +54,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         _invitedUsers.add({
           'email': email,
           'userId': user['id'],
-          'name': user['name'] ?? email.split('@').first,
+          'name': user['full_name'] ?? user['name'] ?? email.split('@').first,
           'status': 'found',
         });
         _emailController.clear();
+        debugPrint('✅ [CreateGroupScreen] Added to invited list: $_invitedUsers');
       } else {
         _showSnack('No user found with that email. They need to sign up first.');
       }
@@ -68,6 +71,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   Future<void> _createGroup() async {
     final groupName = _groupNameController.text.trim();
+    debugPrint('🚀 [CreateGroupScreen._createGroup] Initiated with groupName: "$groupName"');
+
     if (groupName.isEmpty) {
       _showSnack('Please enter a group name');
       return;
@@ -75,33 +80,67 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) {
+      debugPrint('❌ [CreateGroupScreen._createGroup] Current user is not authenticated');
       _showSnack('Not authenticated');
       return;
+    }
+
+    // Auto-search if user left an email in the field
+    final pendingEmail = _emailController.text.trim().toLowerCase();
+    if (pendingEmail.isNotEmpty && pendingEmail.contains('@')) {
+      debugPrint('🔍 [CreateGroupScreen._createGroup] Auto-looking up unsaved email: $pendingEmail');
+      final user = await _groupService.findUserByEmail(pendingEmail);
+      if (user != null && !_invitedUsers.any((u) => u['email'] == pendingEmail)) {
+        _invitedUsers.add({
+          'email': pendingEmail,
+          'userId': user['id'],
+          'name': user['full_name'] ?? user['name'] ?? pendingEmail.split('@').first,
+          'status': 'found',
+        });
+        _emailController.clear();
+      }
     }
 
     setState(() => _isCreating = true);
 
     // 1. Create group in Supabase
+    debugPrint('⏳ [CreateGroupScreen._createGroup] Creating group "$groupName" in Supabase...');
     final group = await _groupService.createGroup(
       name: groupName,
       leaderId: currentUser.id,
     );
 
     if (group == null) {
+      debugPrint('❌ [CreateGroupScreen._createGroup] createGroup returned null');
       setState(() => _isCreating = false);
       _showSnack('Failed to create group. Check your connection.');
       return;
     }
+    debugPrint('✅ [CreateGroupScreen._createGroup] Group created successfully: ID=${group.id}');
 
     // 2. Send invites to all added users
     int sentCount = 0;
+    debugPrint('⏳ [CreateGroupScreen._createGroup] Sending invites to ${_invitedUsers.length} user(s)...');
     for (final invitedUser in _invitedUsers) {
-      if (invitedUser['userId'] != null) {
-        final ok = await _groupService.sendInvite(
-          groupId: group.id,
-          userId: invitedUser['userId'],
-        );
-        if (ok) sentCount++;
+      final targetUserId = invitedUser['userId'];
+      final targetEmail = invitedUser['email'];
+      debugPrint('💌 [CreateGroupScreen._createGroup] Sending invite to $targetEmail ($targetUserId)...');
+
+      if (targetUserId != null) {
+        try {
+          final ok = await _groupService.sendInvite(
+            groupId: group.id,
+            userId: targetUserId,
+          );
+          if (ok) {
+            sentCount++;
+            debugPrint('✅ [CreateGroupScreen._createGroup] Invite sent to $targetEmail');
+          } else {
+            debugPrint('⚠️ [CreateGroupScreen._createGroup] sendInvite returned false for $targetEmail');
+          }
+        } catch (inviteErr) {
+          debugPrint('❌ [CreateGroupScreen._createGroup] Failed sending invite to $targetEmail: $inviteErr');
+        }
       }
     }
 
