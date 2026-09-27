@@ -28,7 +28,6 @@ class ItineraryCartScreen extends StatefulWidget {
 class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   late CityCatalog _currentCity;
   bool _loadingInventory = true;
-  bool _hasLiveOperatorData = false;
 
   final Set<String> _selectedIds = {};
   final TextEditingController _budgetController =
@@ -53,14 +52,15 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
     final cartController = Get.isRegistered<CartController>()
         ? Get.find<CartController>()
         : Get.put(CartController());
-    cartController.setCity(widget.city);
-    if (cartController.activeCity.value?.id == widget.city.id &&
-        cartController.selectedItemIds.isNotEmpty) {
-      _selectedIds.addAll(cartController.selectedItemIds);
+    cartController.setCity(widget.city, isSolo: widget.isSolo);
+    if (cartController.activeCityFor(widget.isSolo).value?.id == widget.city.id &&
+        cartController.selectedItemIdsFor(widget.isSolo).isNotEmpty) {
+      _selectedIds.addAll(cartController.selectedItemIdsFor(widget.isSolo));
     }
-    _budgetController.text = cartController.budget.value.toStringAsFixed(0);
-    _startDate = cartController.startDate.value;
-    _endDate = cartController.endDate.value;
+    _budgetController.text =
+        cartController.budgetFor(widget.isSolo).value.toStringAsFixed(0);
+    _startDate = cartController.startDateFor(widget.isSolo).value;
+    _endDate = cartController.endDateFor(widget.isSolo).value;
 
     _fetchLiveInventory();
   }
@@ -68,11 +68,11 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   void _syncCartController() {
     if (Get.isRegistered<CartController>()) {
       final c = Get.find<CartController>();
-      c.setCity(_currentCity);
-      c.syncItems(_selectedIds);
-      c.budget.value = _budget;
-      c.startDate.value = _startDate;
-      c.endDate.value = _endDate;
+      c.setCity(_currentCity, isSolo: widget.isSolo);
+      c.syncItems(_selectedIds, isSolo: widget.isSolo);
+      c.budgetFor(widget.isSolo).value = _budget;
+      c.startDateFor(widget.isSolo).value = _startDate;
+      c.endDateFor(widget.isSolo).value = _endDate;
     }
   }
 
@@ -86,11 +86,6 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       final dbPlaces = inventory['places'] ?? [];
       final dbTransport = inventory['transport'] ?? [];
 
-      final hasData = dbHotels.isNotEmpty ||
-          dbActivities.isNotEmpty ||
-          dbPlaces.isNotEmpty ||
-          dbTransport.isNotEmpty;
-
       if (mounted) {
         setState(() {
           _currentCity = _currentCity.copyWith(
@@ -99,7 +94,6 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
             places: dbPlaces,
             transport: dbTransport,
           );
-          _hasLiveOperatorData = hasData;
           _loadingInventory = false;
         });
       }
@@ -166,12 +160,27 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   }
 
   Future<void> _pickDate({required bool isStart}) async {
-    final initial = isStart ? _startDate : _endDate;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final DateTime initialDate;
+    final DateTime firstDate;
+    final DateTime lastDate = today.add(const Duration(days: 365 * 2));
+
+    if (isStart) {
+      initialDate = _startDate.isBefore(today) ? today : _startDate;
+      firstDate = today;
+    } else {
+      final minReturn = _startDate.add(const Duration(days: 1));
+      initialDate = _endDate.isBefore(minReturn) ? minReturn : _endDate;
+      firstDate = minReturn;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -189,11 +198,15 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
     setState(() {
       if (isStart) {
         _startDate = picked;
-        if (_endDate.isBefore(_startDate)) {
+        if (!_endDate.isAfter(_startDate)) {
           _endDate = _startDate.add(const Duration(days: 3));
         }
       } else {
-        _endDate = picked;
+        if (!picked.isAfter(_startDate)) {
+          _endDate = _startDate.add(const Duration(days: 1));
+        } else {
+          _endDate = picked;
+        }
       }
     });
   }
@@ -291,7 +304,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
 
     // Clear cart upon successful submission
     if (Get.isRegistered<CartController>()) {
-      Get.find<CartController>().clearCart();
+      Get.find<CartController>().clearCart(isSolo: widget.isSolo);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -368,26 +381,6 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
           },
         ),
       ),
-      actions: [
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Sharing itinerary link...'),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: false,
         titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
@@ -534,9 +527,7 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       children: [
         const SizedBox(height: 12),
         _buildTripConfiguratorCard(),
-        const SizedBox(height: 16),
-        _buildSwiggyPromoBanner(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         _buildCategoryTabs(),
         const SizedBox(height: 12),
         _buildSearchBar(),
@@ -546,109 +537,94 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
     );
   }
 
-  // ── Swiggy Delivery / Trip Configurator Header Card ──────────────────────
+  // ── Swiggy Delivery / Trip Configurator Header Card (Clean & Concise) ─────
   Widget _buildTripConfiguratorCard() {
-    final days = _endDate.difference(_startDate).inDays;
+    final rawDays = _endDate.difference(_startDate).inDays;
+    final days = rawDays < 1 ? 1 : rawDays;
     final overBudget = _budget > 0 && _estimated > _budget;
     final pct = _budget > 0 ? (_estimated / _budget).clamp(0.0, 1.0) : 0.0;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row: Title & Duration Badge
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3EB),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.edit_calendar_rounded,
-                  color: Color(0xFFFC8019),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text(
-                    'TRIP PREFERENCES',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFFFC8019),
-                      letterSpacing: 0.8,
-                    ),
+                  const Icon(
+                    Icons.tune_rounded,
+                    color: Color(0xFFFC8019),
+                    size: 16,
                   ),
+                  const SizedBox(width: 6),
                   Text(
-                    'Dates & Per-Person Budget',
+                    'Trip Preferences',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.bold,
                       color: AppColors.darkCharcoal,
                     ),
                   ),
                 ],
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$days ${days == 1 ? 'Night' : 'Nights'}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFF0F0F0)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // Date Pickers Row
+          // Date Pickers Row (Compact & Clean)
           Row(
             children: [
               Expanded(
                 child: _buildDateTile('DEPARTURE', _startDate, true),
               ),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF4F6F8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$days ${days == 1 ? 'Night' : 'Nights'}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildDateTile('RETURN', _endDate, false),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // Budget Input & Presets
+          // Budget Section Header & Preset Chips
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Max Budget per person',
+                'Max Budget / Person',
                 style: GoogleFonts.poppins(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
@@ -664,57 +640,63 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _budgetController,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: AppColors.darkCharcoal,
-            ),
-            decoration: InputDecoration(
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(left: 14, right: 8, top: 12, bottom: 12),
-                child: Text(
-                  '₹',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFFC8019),
+          const SizedBox(height: 6),
+
+          // Compact Budget TextField
+          SizedBox(
+            height: 38,
+            child: TextField(
+              controller: _budgetController,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 13.5,
+                color: AppColors.darkCharcoal,
+              ),
+              decoration: InputDecoration(
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 10, right: 6),
+                  child: Text(
+                    '₹',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFFC8019),
+                    ),
                   ),
                 ),
-              ),
-              prefixIconConstraints:
-                  const BoxConstraints(minWidth: 0, minHeight: 0),
-              suffixText: 'INR',
-              suffixStyle: GoogleFonts.poppins(
-                fontSize: 12,
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-              filled: true,
-              fillColor: const Color(0xFFF8FAFC),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFFC8019), width: 1.5),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 0, minHeight: 0),
+                suffixText: 'INR',
+                suffixStyle: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFFC8019), width: 1.2),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
-          // Swiggy Budget Meter
+          // Compact Budget Meter
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -722,31 +704,34 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Cart Estimate: ₹${_estimated.toStringAsFixed(0)}',
+                    'Cart: ₹${_estimated.toStringAsFixed(0)}',
                     style: GoogleFonts.poppins(
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w600,
-                      color: overBudget ? AppColors.danger : AppColors.darkCharcoal,
+                      color:
+                          overBudget ? AppColors.danger : AppColors.darkCharcoal,
                     ),
                   ),
                   Text(
                     overBudget
                         ? 'Over cap by ₹${(_estimated - _budget).toStringAsFixed(0)}'
-                        : '${((1 - pct) * 100).toStringAsFixed(0)}% remaining',
+                        : '${((1 - pct) * 100).toStringAsFixed(0)}% left',
                     style: GoogleFonts.poppins(
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w600,
-                      color: overBudget ? AppColors.danger : const Color(0xFF60B246),
+                      color: overBudget
+                          ? AppColors.danger
+                          : const Color(0xFF60B246),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: pct,
-                  minHeight: 6,
+                  minHeight: 4.5,
                   backgroundColor: const Color(0xFFE2E8F0),
                   color: overBudget
                       ? AppColors.danger
@@ -765,42 +750,41 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
   Widget _buildDateTile(String label, DateTime date, bool isStart) {
     return InkWell(
       onTap: () => _pickDate(isStart: isStart),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.calendar_today_outlined,
-                    size: 13, color: Color(0xFFFC8019)),
-                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
                 Text(
                   _fmtShort(date),
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkCharcoal,
                   ),
                 ),
               ],
             ),
+            const Icon(Icons.calendar_today_outlined,
+                size: 14, color: Color(0xFFFC8019)),
           ],
         ),
       ),
@@ -837,77 +821,6 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
     );
   }
 
-  // ── Swiggy Promo Banner ───────────────────────────────────────────────────
-  Widget _buildSwiggyPromoBanner() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: _hasLiveOperatorData
-              ? [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)]
-              : [const Color(0xFFFFF7ED), const Color(0xFFFFF1F2)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _hasLiveOperatorData
-              ? const Color(0xFFBBF7D0)
-              : const Color(0xFFFFEDD5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _hasLiveOperatorData
-                  ? const Color(0xFF16A34A)
-                  : const Color(0xFFFC8019),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _hasLiveOperatorData
-                  ? Icons.bolt_rounded
-                  : Icons.local_offer,
-              color: Colors.white,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _hasLiveOperatorData
-                      ? '⚡ LIVE OPERATOR INVENTORY'
-                      : 'MUST-HAVES PACK DISCOUNT',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: _hasLiveOperatorData
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFFC8019),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                Text(
-                  _hasLiveOperatorData
-                      ? 'Showing real-time stays, activities, places & transport from verified operators.'
-                      : 'Add 1 Stay + 2 Activities to unlock up to 20% operator discounts!',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.darkCharcoal,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Swiggy Category Tabs ──────────────────────────────────────────────────
   Widget _buildCategoryTabs() {
@@ -1667,143 +1580,154 @@ class _ItineraryCartScreenState extends State<ItineraryCartScreen> {
       bottom: 16 + MediaQuery.of(context).padding.bottom,
       left: 16,
       right: 16,
-      child: Material(
-        elevation: 12,
-        borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF1E2430),
-        shadowColor: Colors.black.withValues(alpha: 0.3),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E2430),
-            borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.28),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
           ),
-          child: Row(
-            children: [
-              // Left side info
-              Expanded(
-                child: InkWell(
-                  onTap: _selectedItems.isEmpty ? null : _showCartDetailsSheet,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            '${_selectedItems.length} ${_selectedItems.length == 1 ? 'ITEM' : 'ITEMS'} ADDED',
+        ),
+        child: Row(
+          children: [
+            // Left side info
+            Expanded(
+              child: InkWell(
+                onTap: _selectedItems.isEmpty ? null : _showCartDetailsSheet,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${_selectedItems.length} ${_selectedItems.length == 1 ? 'Item' : 'Items'} Added',
                             style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFFFC8019),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          if (_selectedItems.isNotEmpty) ...[
-                            const SizedBox(width: 4),
-                            const Icon(Icons.keyboard_arrow_up,
-                                color: Color(0xFFFC8019), size: 16),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            'Est. ₹${_estimated.toStringAsFixed(0)}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.bold,
-                              color: overBudget ? AppColors.danger : Colors.white,
+                              color: const Color(0xFF94A3B8),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '/ person',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: Colors.white60,
-                            ),
-                          ),
+                        ),
+                        if (_selectedItems.isNotEmpty) ...[
+                          const SizedBox(width: 3),
+                          const Icon(Icons.keyboard_arrow_up_rounded,
+                              color: Colors.white, size: 15),
                         ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Right side CTA button
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.isSolo && !_showSummary) ...[
-                    Container(
-                      height: 48,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF8B5CF6)),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.push_pin_rounded,
-                            color: Color(0xFFA78BFA), size: 20),
-                        tooltip: 'Pin as Solo Post-It',
-                        onPressed: _canContinue ? _pinAsSoloPostIt : null,
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 1),
+                    Row(
+                      children: [
+                        Text(
+                          '₹${_estimated.toStringAsFixed(0)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: overBudget ? const Color(0xFFF87171) : Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '/ pax',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: !_canContinue || _submitting
-                          ? null
-                          : (_showSummary ? _submit : _onPrimaryCta),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFC8019),
-                        disabledBackgroundColor: Colors.white24,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 4,
-                        shadowColor: const Color(0xFFFC8019).withValues(alpha: 0.5),
-                      ),
-                      child: _submitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Row(
-                              children: [
-                                Text(
-                                  _showSummary
-                                      ? 'SUBMIT TRIP'
-                                      : (widget.isSolo
-                                          ? 'FIND MATCHES'
-                                          : 'CHOOSE GROUP'),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.arrow_forward_rounded,
-                                    color: Colors.white, size: 16),
-                              ],
-                            ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Right side CTA button
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.isSolo && !_showSummary) ...[
+                  Container(
+                    height: 40,
+                    width: 40,
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.push_pin_rounded,
+                          color: Colors.white, size: 18),
+                      tooltip: 'Pin as Solo Post-It',
+                      onPressed: _canContinue ? _pinAsSoloPostIt : null,
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
+                SizedBox(
+                  height: 40,
+                  child: ElevatedButton(
+                    onPressed: !_canContinue || _submitting
+                        ? null
+                        : (_showSummary ? _submit : _onPrimaryCta),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF0F172A),
+                      disabledBackgroundColor: Colors.white24,
+                      disabledForegroundColor: Colors.white54,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF0F172A),
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _showSummary
+                                    ? 'Submit Trip'
+                                    : (widget.isSolo
+                                        ? 'Find Matches'
+                                        : 'Choose Group'),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_forward_rounded,
+                                  color: Color(0xFF0F172A), size: 13),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

@@ -28,11 +28,11 @@ class CustomPrimaryButton extends StatelessWidget {
       width: width ?? double.infinity,
       height: height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: onPressed != null && !loading
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.35),
+                  color: AppColors.primaryDarkBlue.withValues(alpha: 0.25),
                   blurRadius: 15,
                   offset: const Offset(0, 6),
                 ),
@@ -42,11 +42,12 @@ class CustomPrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: loading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
+          backgroundColor: AppColors.primaryDarkBlue,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.primaryDarkBlue.withValues(alpha: 0.6),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(32),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24),
         ),
@@ -62,7 +63,7 @@ class CustomPrimaryButton extends StatelessWidget {
             : Text(
                 label,
                 style: GoogleFonts.poppins(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 0.2,

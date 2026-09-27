@@ -117,7 +117,7 @@ class LoginScreen extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            color: Colors.indigoAccent,
+                            color: AppColors.primaryDarkBlue,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -221,7 +221,7 @@ class LoginScreen extends StatelessWidget {
                             child: Text(
                               'Forgot Password?',
                               style: GoogleFonts.poppins(
-                                color: Colors.indigoAccent,
+                                color: AppColors.primaryDarkBlue,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -237,7 +237,7 @@ class LoginScreen extends StatelessWidget {
                   // ── Login button ─────────────────────────────────────────────
                   SizedBox(
                     width: double.infinity,
-                    height: 58,
+                    height: 56,
                     child: Obx(() => ElevatedButton(
                           onPressed: controller.isLoading.value
                               ? null
@@ -253,13 +253,12 @@ class LoginScreen extends StatelessWidget {
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigoAccent,
+                            backgroundColor: AppColors.primaryDarkBlue,
                             disabledBackgroundColor:
-                                Colors.indigoAccent.withValues(alpha: 0.6),
-                            elevation: 4,
-                            shadowColor: Colors.indigoAccent.withValues(alpha: 0.4),
+                                AppColors.primaryDarkBlue.withValues(alpha: 0.6),
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(32),
                             ),
                           ),
                           child: controller.isLoading.value
@@ -275,7 +274,7 @@ class LoginScreen extends StatelessWidget {
                               : Text(
                                   'Sign in',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),

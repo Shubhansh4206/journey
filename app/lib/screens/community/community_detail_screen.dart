@@ -27,9 +27,6 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     _community = widget.community;
   }
 
-  String _fmt(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<List<AiCommunity>>(
@@ -59,10 +56,6 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // ── AI Match Score Banner ───────────────────────
-                          _buildAiMatchBanner(current),
-                          const SizedBox(height: 24),
-
                           // ── 1. The Core Base (Fixed) ────────────────────
                           _buildFixedCoreSection(current),
                           const SizedBox(height: 28),
@@ -208,64 +201,6 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     );
   }
 
-  // ── AI Match Banner ───────────────────────────────────────────────────────
-  Widget _buildAiMatchBanner(AiCommunity comm) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F3FF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDDD6FE)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.psychology_rounded,
-                    color: Color(0xFF7C3AED), size: 18),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'AI CLUSTERING INSIGHT',
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF7C3AED),
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${_fmt(comm.startDate)} → ${_fmt(comm.endDate)}',
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            comm.tagline,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.darkCharcoal,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── 1. The Core Base (Fixed) ──────────────────────────────────────────────
   Widget _buildFixedCoreSection(AiCommunity comm) {
@@ -275,14 +210,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              '1. The Core Base',
-              style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkCharcoal,
+            Expanded(
+              child: Text(
+                '1. The Core Base',
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkCharcoal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -505,14 +445,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              '2. Flexible Activity Roster',
-              style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkCharcoal,
+            Expanded(
+              child: Text(
+                '2. Flexible Activity Roster',
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkCharcoal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -572,47 +517,134 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top status bar
+                // Top status bar: Category/Time on left, Price on right
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isOptedOut
-                            ? const Color(0xFF16A34A).withValues(alpha: 0.15)
-                            : const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isOptedOut
-                            ? '🌿 FREE SLOT (${activity.dayNumber})'
-                            : '${activity.dayNumber.toUpperCase()} · ${activity.category.toUpperCase()}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: isOptedOut
-                              ? const Color(0xFF15803D)
-                              : const Color(0xFF7C3AED),
-                        ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isOptedOut
+                                  ? const Color(0xFF16A34A).withValues(alpha: 0.15)
+                                  : const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isOptedOut
+                                  ? '🌿 FREE SLOT (${activity.dayNumber})'
+                                  : '${activity.dayNumber.toUpperCase()} · ${activity.category.toUpperCase()}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isOptedOut
+                                    ? const Color(0xFF15803D)
+                                    : const Color(0xFF7C3AED),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              activity.timeSlot,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isOptedOut) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Saved ₹${activity.price.toStringAsFixed(0)}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF16A34A),
+                              ),
+                            ),
+                          ),
+                        ],
+                        Text(
+                          isOptedOut ? '₹0' : '₹${activity.price.toStringAsFixed(0)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: isOptedOut
+                                ? const Color(0xFF16A34A)
+                                : AppColors.darkCharcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Middle: Title & Description
+                Text(
+                  isOptedOut
+                      ? 'Free Exploration / Relax Time'
+                      : activity.name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isOptedOut
+                        ? const Color(0xFF15803D)
+                        : AppColors.darkCharcoal,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  isOptedOut
+                      ? 'Original squad activity: ${activity.name}. You are free to do personal exploration.'
+                      : activity.description,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    color: AppColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 8),
+
+                // Bottom: Dedicated Opt-Out Toggle Button Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Text(
-                      activity.timeSlot,
+                      isOptedOut ? 'Opted out from squad' : 'Squad included activity',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: AppColors.textMuted,
-                        fontWeight: FontWeight.w500,
+                        color: isOptedOut ? const Color(0xFF16A34A) : AppColors.textMuted,
+                        fontWeight: isOptedOut ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
-                    const Spacer(),
-                    // Opt-out toggle button
                     InkWell(
                       onTap: () => _communityService.toggleActivityOptOut(
                         comm.id,
                         activity.id,
                       ),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
@@ -620,7 +652,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           color: isOptedOut
                               ? const Color(0xFF16A34A)
                               : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isOptedOut ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -644,69 +679,6 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Title & Price
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isOptedOut
-                                ? 'Free Exploration / Relax Time'
-                                : activity.name,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isOptedOut
-                                  ? const Color(0xFF15803D)
-                                  : AppColors.darkCharcoal,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isOptedOut
-                                ? 'Original squad activity: ${activity.name}. You are free to do personal exploration.'
-                                : activity.description,
-                            style: GoogleFonts.poppins(
-                              fontSize: 11.5,
-                              color: AppColors.textSecondary,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          isOptedOut ? '₹0' : '₹${activity.price.toStringAsFixed(0)}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: isOptedOut
-                                ? const Color(0xFF16A34A)
-                                : AppColors.darkCharcoal,
-                          ),
-                        ),
-                        if (isOptedOut)
-                          Text(
-                            'Saved ₹${activity.price.toStringAsFixed(0)}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF16A34A),
-                            ),
-                          ),
-                      ],
                     ),
                   ],
                 ),
@@ -837,26 +809,24 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     double savedAmount,
   ) {
     return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
+      bottom: 16 + MediaQuery.of(context).padding.bottom,
+      left: 16,
+      right: 16,
       child: Container(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          14,
-          20,
-          14 + MediaQuery.of(context).padding.bottom,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 15,
-              offset: const Offset(0, -4),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.28),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+          ),
         ),
         child: Row(
           children: [
@@ -869,12 +839,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   Row(
                     children: [
                       Text(
-                        'YOUR ESTIMATED COST',
+                        'Total Per Person',
                         style: GoogleFonts.poppins(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textMuted,
-                          letterSpacing: 0.5,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF94A3B8),
                         ),
                       ),
                       if (savedAmount > 0) ...[
@@ -883,15 +852,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           padding:
                               const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(4),
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             '-₹${savedAmount.toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF16A34A),
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -903,17 +872,17 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       Text(
                         '₹${personalCost.toStringAsFixed(0)}',
                         style: GoogleFonts.poppins(
-                          fontSize: 19,
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFFFC8019),
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Text(
-                        '/ person',
+                        '/ pax',
                         style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
+                          fontSize: 10.5,
+                          color: const Color(0xFF94A3B8),
                         ),
                       ),
                     ],
@@ -921,6 +890,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
 
             // Right Actions
             if (isAccepted) ...[
@@ -933,21 +903,23 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.forum_rounded, size: 18, color: Colors.white),
+                icon: const Icon(Icons.forum_rounded, size: 16, color: Color(0xFF0F172A)),
                 label: Text(
                   'SQUAD CHAT',
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(24),
                   ),
+                  elevation: 0,
                 ),
               ),
             ] else ...[
@@ -957,16 +929,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   Navigator.pop(context);
                 },
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  side: const BorderSide(color: Color(0xFFFCA5A5)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
                 child: Text(
                   'Decline',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -979,23 +955,25 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         '🎉 Welcome to ${comm.title}!',
                         style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                       ),
-                      backgroundColor: const Color(0xFF60B246),
+                      backgroundColor: const Color(0xFF0F172A),
                     ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF60B246),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(24),
                   ),
+                  elevation: 0,
                 ),
                 child: Text(
                   'ACCEPT TRIP',
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
               ),

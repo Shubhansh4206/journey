@@ -87,8 +87,13 @@ final GoRouter appRouter = GoRouter(
         final cartController = Get.isRegistered<CartController>()
             ? Get.find<CartController>()
             : Get.put(CartController());
-        final city = cartController.activeCity.value ?? mockCities.first;
-        return ItineraryCartScreen(city: city, isSolo: false);
+        final isSolo = TravelModeService.isSolo;
+        final city =
+            cartController.getActiveCity(isSolo: isSolo) ?? mockCities.first;
+        return ItineraryCartScreen(
+          city: city,
+          isSolo: isSolo,
+        );
       },
     ),
     StatefulShellRoute.indexedStack(

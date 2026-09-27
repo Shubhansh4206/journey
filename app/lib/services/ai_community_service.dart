@@ -67,7 +67,7 @@ class AiCommunityService {
     final defaultCommunities = [
       AiCommunity(
         id: 'ai-comm-goa-1',
-        title: '🌴 Goa Sunset & Chill Co-Living Squad',
+        title: 'Goa Co-Living Squad',
         destination: 'Goa',
         tagline: 'AI Clustered from 6 solo travelers with 92% budget & date overlap',
         coverImageUrl:
@@ -160,7 +160,7 @@ class AiCommunityService {
       ),
       AiCommunity(
         id: 'ai-comm-jaipur-2',
-        title: '👑 Royal Forts & Cafe Hopping Jaipur Circle',
+        title: 'Jaipur Cultural Squad',
         destination: 'Jaipur',
         tagline: 'Formed from 4 solo history buffs with compatible cultural interests',
         coverImageUrl:
@@ -241,7 +241,7 @@ class AiCommunityService {
       ),
       AiCommunity(
         id: 'ai-comm-udaipur-3',
-        title: '🛶 Udaipur Lakefront Poets & Kayakers',
+        title: 'Udaipur Lakefront Squad',
         destination: 'Udaipur',
         tagline: 'Active squad of 5 solo travelers exploring lakes & palace cafes',
         coverImageUrl:

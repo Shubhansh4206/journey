@@ -45,7 +45,7 @@ class _CommunityHubScreenState extends State<CommunityHubScreen> {
             ),
             const SizedBox(width: 10),
             Text(
-              'AI Solo Communities',
+              'Solo Communities',
               style: GoogleFonts.poppins(
                 color: AppColors.darkCharcoal,
                 fontWeight: FontWeight.w800,
@@ -340,18 +340,24 @@ class _CommunityHubScreenState extends State<CommunityHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.lock_rounded, size: 13, color: Color(0xFFD97706)),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(Icons.lock_rounded, size: 13, color: Color(0xFFD97706)),
+                    ),
                     const SizedBox(width: 4),
-                    Text(
-                      'Fixed Core: ${comm.fixedHotel.name} · ${comm.fixedTransport.name}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.darkCharcoal,
+                    Expanded(
+                      child: Text(
+                        'Fixed Core: ${comm.fixedHotel.name} · ${comm.fixedTransport.name}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.darkCharcoal,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -360,11 +366,15 @@ class _CommunityHubScreenState extends State<CommunityHubScreen> {
                   children: [
                     const Icon(Icons.tune_rounded, size: 13, color: Color(0xFF16A34A)),
                     const SizedBox(width: 4),
-                    Text(
-                      '${comm.activityRoster.length} Activities with Opt-Out Support',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11.5,
-                        color: AppColors.textSecondary,
+                    Expanded(
+                      child: Text(
+                        '${comm.activityRoster.length} Activities with Opt-Out Support',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -441,14 +451,15 @@ class _CommunityHubScreenState extends State<CommunityHubScreen> {
                           );
                         },
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.darkCharcoal,
-                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          foregroundColor: const Color(0xFF0F172A),
+                          side: const BorderSide(color: Color(0xFFE2E8F0)),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(24),
                           ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
-                          'Customise Itinerary',
+                          'Review',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -458,59 +469,67 @@ class _CommunityHubScreenState extends State<CommunityHubScreen> {
                     ),
                     const SizedBox(width: 8),
                     if (isInvited) ...[
-                      ElevatedButton(
-                        onPressed: () {
-                          _communityService.respondToInvitation(comm.id, true);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '🎉 Accepted invitation to ${comm.title}!',
-                                style: GoogleFonts.poppins(),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _communityService.respondToInvitation(comm.id, true);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '🎉 Accepted invitation to ${comm.title}!',
+                                  style: GoogleFonts.poppins(),
+                                ),
+                                backgroundColor: const Color(0xFF0F172A),
                               ),
-                              backgroundColor: const Color(0xFF60B246),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
                             ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF60B246),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                        child: Text(
-                          'ACCEPT',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                          child: Text(
+                            'ACCEPT',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
                     ] else if (isAccepted) ...[
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CommunityChatScreen(community: comm),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    CommunityChatScreen(community: comm),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.forum_rounded,
+                              size: 14, color: Colors.white),
+                          label: Text(
+                            'CHAT & VOTE',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.forum_rounded,
-                            size: 14, color: Colors.white),
-                        label: Text(
-                          'CHAT & VOTE',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8B5CF6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
                           ),
                         ),
                       ),

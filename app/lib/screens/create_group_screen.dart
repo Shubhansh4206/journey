@@ -217,7 +217,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       style: GoogleFonts.poppins(),
                       decoration: InputDecoration(
                         labelText: 'Group Name',
-                        hintText: 'e.g., Goa 2026 Squad',
+                        hintText: 'Enter group name',
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -343,14 +343,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         const SizedBox(width: 12),
                         InkWell(
                           onTap: _isSearching ? null : _lookupAndInvite,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: _isSearching
                                   ? AppColors.textMuted
-                                  : AppColors.electricBlue,
-                              borderRadius: BorderRadius.circular(12),
+                                  : AppColors.primaryDarkBlue,
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: _isSearching
                                 ? const SizedBox(
@@ -390,7 +390,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                           'You',
                       email: Supabase.instance.client.auth.currentUser?.email ?? '',
                       role: 'Leader',
-                      roleColor: AppColors.electricBlue,
+                      roleColor: AppColors.primaryDarkBlue,
                       trailing: const SizedBox.shrink(),
                     ),
 
@@ -401,7 +401,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         name: u['name'] ?? u['email'],
                         email: u['email'],
                         role: 'Invite Ready',
-                        roleColor: AppColors.electricYellow,
+                        roleColor: const Color(0xFFF59E0B),
                         trailing: IconButton(
                           icon: const Icon(Icons.close, color: AppColors.textMuted, size: 20),
                           onPressed: () => _removeUser(index),
@@ -432,9 +432,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 child: ElevatedButton(
                   onPressed: _isCreating ? null : _createGroup,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.vibrantPurple,
+                    backgroundColor: AppColors.primaryDarkBlue,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(32),
                     ),
                   ),
                   child: _isCreating

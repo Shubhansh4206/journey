@@ -56,7 +56,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         Container(
           decoration: BoxDecoration(
             color: AppColors.inputFill,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: Colors.transparent,
               width: 1.5,
@@ -83,7 +83,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
               prefixIcon: widget.prefixIcon != null
                   ? Icon(
                       widget.prefixIcon,
-                      color: AppColors.primary,
+                      color: AppColors.primaryDarkBlue,
                       size: 20,
                     )
                   : null,
@@ -108,17 +108,17 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 vertical: 16,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
                 borderSide: const BorderSide(
-                  color: AppColors.primary,
+                  color: AppColors.primaryDarkBlue,
                   width: 1.8,
                 ),
               ),

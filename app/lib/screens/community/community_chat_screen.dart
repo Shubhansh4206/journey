@@ -123,7 +123,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen> {
                 TextField(
                   controller: questionCtrl,
                   decoration: InputDecoration(
-                    hintText: 'e.g. Swap Day 2 sunset walk with Anjuna beach bonfire?',
+                    hintText: 'Enter poll question or suggested itinerary change',
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(

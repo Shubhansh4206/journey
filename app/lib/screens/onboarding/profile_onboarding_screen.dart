@@ -26,7 +26,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
           'Journey Profile',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
-            color: Colors.indigoAccent,
+            color: AppColors.primaryDarkBlue,
             fontSize: 18,
           ),
         ),
@@ -46,10 +46,10 @@ class ProfileOnboardingScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: themeHeaderGradient(),
-                      borderRadius: BorderRadius.circular(16),
+                      color: AppColors.softGrey,
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.indigoAccent.withValues(alpha: 0.2),
+                        color: AppColors.border,
                       ),
                     ),
                     child: Column(
@@ -60,7 +60,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.indigoAccent,
+                                color: AppColors.primaryDarkBlue,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
@@ -73,9 +73,9 @@ class ProfileOnboardingScreen extends StatelessWidget {
                             Text(
                               "Let's Get Started!",
                               style: GoogleFonts.poppins(
-                                fontSize: 22,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.indigoAccent,
+                                color: AppColors.primaryDarkBlue,
                               ),
                             ),
                           ],
@@ -137,7 +137,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                     label: 'Full Name *',
                     controller: profileController.fullNameController,
                     prefixIcon: Icons.badge_outlined,
-                    hintText: 'e.g. Alex Smith',
+                    hintText: 'Enter your full name',
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 16),
@@ -149,7 +149,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                           controller: profileController.ageController,
                           keyboardType: TextInputType.number,
                           prefixIcon: Icons.calendar_today_outlined,
-                          hintText: 'e.g. 26',
+                          hintText: 'Enter your age',
                           textInputAction: TextInputAction.next,
                         ),
                       ),
@@ -160,7 +160,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                           controller: profileController.phoneController,
                           keyboardType: TextInputType.phone,
                           prefixIcon: Icons.phone_outlined,
-                          hintText: '+91 9876543210',
+                          hintText: 'Enter phone number',
                           textInputAction: TextInputAction.next,
                         ),
                       ),
@@ -195,14 +195,14 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   : AppColors.textPrimary,
                             ),
                             selected: isSelected,
-                            selectedColor: Colors.indigoAccent,
-                            backgroundColor: AppColors.inputFill,
+                            selectedColor: AppColors.primaryDarkBlue,
+                            backgroundColor: AppColors.softGrey,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
                                 color: isSelected
-                                    ? Colors.indigoAccent
-                                    : Colors.transparent,
+                                    ? AppColors.primaryDarkBlue
+                                    : AppColors.border,
                               ),
                             ),
                             onSelected: (selected) {
@@ -238,14 +238,14 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   : AppColors.textPrimary,
                             ),
                             selected: isSelected,
-                            selectedColor: Colors.indigoAccent,
-                            backgroundColor: AppColors.inputFill,
+                            selectedColor: AppColors.primaryDarkBlue,
+                            backgroundColor: AppColors.softGrey,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
                                 color: isSelected
-                                    ? Colors.indigoAccent
-                                    : Colors.transparent,
+                                    ? AppColors.primaryDarkBlue
+                                    : AppColors.border,
                               ),
                             ),
                             onSelected: (selected) {
@@ -290,15 +290,15 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   : AppColors.textPrimary,
                             ),
                             selected: isSelected,
-                            selectedColor: Colors.indigoAccent,
-                            backgroundColor: AppColors.inputFill,
+                            selectedColor: AppColors.primaryDarkBlue,
+                            backgroundColor: AppColors.softGrey,
                             checkmarkColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
                                 color: isSelected
-                                    ? Colors.indigoAccent
-                                    : Colors.transparent,
+                                    ? AppColors.primaryDarkBlue
+                                    : AppColors.border,
                               ),
                             ),
                             onSelected: (_) =>
@@ -333,15 +333,15 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   : AppColors.textPrimary,
                             ),
                             selected: isSelected,
-                            selectedColor: Colors.indigoAccent,
-                            backgroundColor: AppColors.inputFill,
+                            selectedColor: AppColors.primaryDarkBlue,
+                            backgroundColor: AppColors.softGrey,
                             checkmarkColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
                                 color: isSelected
-                                    ? Colors.indigoAccent
-                                    : Colors.transparent,
+                                    ? AppColors.primaryDarkBlue
+                                    : AppColors.border,
                               ),
                             ),
                             onSelected: (_) =>
@@ -375,15 +375,15 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   : AppColors.textPrimary,
                             ),
                             selected: isSelected,
-                            selectedColor: Colors.indigoAccent,
-                            backgroundColor: AppColors.inputFill,
+                            selectedColor: AppColors.primaryDarkBlue,
+                            backgroundColor: AppColors.softGrey,
                             checkmarkColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
                                 color: isSelected
-                                    ? Colors.indigoAccent
-                                    : Colors.transparent,
+                                    ? AppColors.primaryDarkBlue
+                                    : AppColors.border,
                               ),
                             ),
                             onSelected: (_) =>
@@ -527,14 +527,12 @@ class ProfileOnboardingScreen extends StatelessWidget {
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigoAccent,
+                            backgroundColor: AppColors.primaryDarkBlue,
                             disabledBackgroundColor:
-                                Colors.indigoAccent.withValues(alpha: 0.6),
-                            elevation: 4,
-                            shadowColor:
-                                Colors.indigoAccent.withValues(alpha: 0.4),
+                                AppColors.primaryDarkBlue.withValues(alpha: 0.6),
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(32),
                             ),
                           ),
                           child: profileController.isLoading.value
@@ -550,7 +548,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
                               : Text(
                                   'Complete profile',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 17,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
@@ -571,8 +569,8 @@ class ProfileOnboardingScreen extends StatelessWidget {
   LinearGradient themeHeaderGradient() {
     return LinearGradient(
       colors: [
-        Colors.indigoAccent.withValues(alpha: 0.12),
-        const Color(0xFFE0E7FF).withValues(alpha: 0.4),
+        AppColors.primaryDarkBlue.withValues(alpha: 0.08),
+        AppColors.primaryLight.withValues(alpha: 0.4),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -582,7 +580,7 @@ class ProfileOnboardingScreen extends StatelessWidget {
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.indigoAccent),
+        Icon(icon, size: 20, color: AppColors.primaryDarkBlue),
         const SizedBox(width: 8),
         Text(
           title,

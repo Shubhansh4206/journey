@@ -182,12 +182,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.offWhite,
+      backgroundColor: AppColors.scaffoldBackground,
       body: SafeArea(
         child: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  color: AppColors.electricBlue,
+                  color: AppColors.primaryDarkBlue,
                 ),
               )
             : SingleChildScrollView(
@@ -204,11 +204,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const Center(
                       child: CircleAvatar(
                         radius: 55,
-                        backgroundColor: Color(0xFFE0E7FF),
+                        backgroundColor: AppColors.primaryLight,
                         child: Icon(
                           Icons.person,
                           size: 60,
-                          color: AppColors.electricBlue,
+                          color: AppColors.primaryDarkBlue,
                         ),
                       ),
                     ),
@@ -342,16 +342,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      height: 52,
+                      height: 54,
                       child: ElevatedButton(
                         onPressed: _isSaving ? null : _saveProfile,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.electricBlue,
-                          elevation: 2,
-                          shadowColor:
-                              AppColors.electricBlue.withValues(alpha: 0.35),
+                          backgroundColor: AppColors.primaryDarkBlue,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(32),
                           ),
                         ),
                         child: _isSaving
@@ -448,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: 1.5,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(32),
                     ),
                   ),
                 ),
@@ -546,7 +544,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFFE5E7EB),
+          color: AppColors.border,
           width: 1.2,
         ),
         boxShadow: [
@@ -573,7 +571,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           prefixIcon: Icon(
             icon,
-            color: AppColors.electricBlue,
+            color: AppColors.primaryDarkBlue,
             size: 20,
           ),
           border: InputBorder.none,
@@ -590,16 +588,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFE5E7EB),
+          color: AppColors.border,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -618,12 +616,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.electricBlue.withValues(alpha: 0.1),
+          color: AppColors.primaryDarkBlue.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
           icon,
-          color: AppColors.electricBlue,
+          color: AppColors.primaryDarkBlue,
           size: 20,
         ),
       ),

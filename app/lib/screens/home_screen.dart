@@ -10,7 +10,6 @@ import '../screens/itinerary_cart_screen.dart';
 import '../services/profile_service.dart';
 import '../services/travel_mode_service.dart';
 import '../utils/colors.dart';
-import '../widgets/swiggy_group_roster_sheet.dart';
 import '../widgets/travel_mode_toggle.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -116,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openCart(CityCatalog city) {
-    _cartController.setCity(city);
+    _cartController.setCity(city, isSolo: _isSolo);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -131,310 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showCartSheet() {
-    final count = _cartController.itemCount;
-    final activeCity = _cartController.activeCity.value;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFFFC8019), size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Your Itinerary Cart',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkCharcoal,
-                          ),
-                        ),
-                        Text(
-                          count > 0 ? '$count item(s) selected for ${activeCity?.name ?? "trip"}' : 'No items added yet',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (count > 0)
-                    TextButton(
-                      onPressed: () {
-                        _cartController.clearCart();
-                        Navigator.pop(ctx);
-                        setState(() {});
-                      },
-                      child: Text('Clear', style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-              if (count > 0 && activeCity != null) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Active Destination', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
-                    Text(activeCity.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.darkCharcoal)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Progress', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
-                    Text(_cartController.progressStatusText, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFFC8019))),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _openCart(activeCity);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFC8019),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: Text('Resume & Edit Itinerary', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
-                  ),
-                ),
-              ] else ...[
-                Text(
-                  'Select a destination below to start picking stays, thrills, and sightseeing spots:',
-                  style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: mockCities.map((city) {
-                    return ActionChip(
-                      avatar: const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFFFC8019)),
-                      label: Text(city.name, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
-                      backgroundColor: const Color(0xFFF8FAFC),
-                      side: BorderSide(color: Colors.grey.shade300),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _openCart(city);
-                      },
-                    );
-                  }).toList(),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildItineraryProgressCard() {
-    return Obx(() {
-      final hasCart = _cartController.hasActiveCart;
-      final city = _cartController.activeCity.value;
-      final count = _cartController.itemCount;
-      final progress = _cartController.progressPercentage;
-
-      if (!hasCart) {
-        return Container(
-          margin: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFFFC8019), size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Itinerary Cart is Ready',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkCharcoal,
-                      ),
-                    ),
-                    Text(
-                      'Pick a destination below to add stays, sights & thrill activities.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: _showCartSheet,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFFC8019)),
-                  foregroundColor: const Color(0xFFFC8019),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: Text('View Cart', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-      }
-
-      return Container(
-        margin: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFFC8019).withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFC8019).withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.route_rounded, color: Color(0xFFFC8019), size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        city != null ? '${city.name} Itinerary Cart' : 'Draft Itinerary',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkCharcoal,
-                        ),
-                      ),
-                      Text(
-                        '$count Item${count == 1 ? '' : 's'}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFFC8019),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress > 0 ? progress : 0.25,
-                      minHeight: 4,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFC8019)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: () {
-                if (city != null) {
-                  _openCart(city);
-                } else if (mockCities.isNotEmpty) {
-                  _openCart(mockCities.first);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFC8019),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text('Resume', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -446,137 +141,278 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // Upgraded App Bar with reactive dynamic user name
-            SliverToBoxAdapter(
-              child: ValueListenableBuilder<String?>(
-                valueListenable: ProfileService.currentUserNameNotifier,
-                builder: (context, dynamicName, _) {
-                  final activeName = (dynamicName != null && dynamicName.trim().isNotEmpty)
-                      ? dynamicName
-                      : defaultUserName;
-                  return _buildUpgradedHeader(activeName);
-                },
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+        child: Stack(
+          children: [
+            CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // Upgraded App Bar with reactive dynamic user name
+                SliverToBoxAdapter(
+                  child: ValueListenableBuilder<String?>(
+                    valueListenable: ProfileService.currentUserNameNotifier,
+                    builder: (context, dynamicName, _) {
+                      final activeName = (dynamicName != null && dynamicName.trim().isNotEmpty)
+                          ? dynamicName
+                          : defaultUserName;
+                      return _buildUpgradedHeader(activeName);
+                    },
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-            // Swiggy-Style Active Itinerary Tracking Banner
-            SliverToBoxAdapter(
-              child: _buildItineraryProgressCard(),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                // Core Travel Mode Toggle
+                SliverToBoxAdapter(
+                  child: TravelModeToggle(
+                    isSolo: _isSolo,
+                    onChanged: (solo) {
+                      setState(() => _isSolo = solo);
+                      TravelModeService.setSolo(solo);
+                    },
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // Core Travel Mode Toggle
-            SliverToBoxAdapter(
-              child: TravelModeToggle(
-                isSolo: _isSolo,
-                onChanged: (solo) {
-                  setState(() => _isSolo = solo);
-                  TravelModeService.setSolo(solo);
-                },
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                // Destination Search Bar
+                SliverToBoxAdapter(child: _buildSearchBar()),
+                const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-            // Mode Explanation Card
-            SliverToBoxAdapter(child: _buildModeBanner()),
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                // Vibe Category Filters
+                SliverToBoxAdapter(child: _buildVibeCategories()),
+                const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-            // Destination Search Bar
-            SliverToBoxAdapter(child: _buildSearchBar()),
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
-
-            // Vibe Category Filters
-            SliverToBoxAdapter(child: _buildVibeCategories()),
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
-            // Destinations Header
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                // Destinations Header
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Featured Destinations',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkCharcoal,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFC8019).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${_filteredCities.length} Cities',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFFC8019),
+                        Row(
+                          children: [
+                            Text(
+                              'Featured Destinations',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.nearBlack,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.softGrey,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Text(
+                                '${_filteredCities.length} Cities',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDarkBlue,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-            // Destinations List / Grid
-            _filteredCities.isEmpty
-                ? SliverToBoxAdapter(child: _buildEmptyState())
-                : SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final city = _filteredCities[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: _buildDestinationExploreCard(city),
-                          );
-                        },
-                        childCount: _filteredCities.length,
-                      ),
-                    ),
                   ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                // Destinations List / Grid
+                _filteredCities.isEmpty
+                    ? SliverToBoxAdapter(child: _buildEmptyState())
+                    : SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final city = _filteredCities[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildDestinationExploreCard(city),
+                              );
+                            },
+                            childCount: _filteredCities.length,
+                          ),
+                        ),
+                      ),
 
-            // Explore Section 1: Top Trending Experiences Carousel
-            SliverToBoxAdapter(child: _buildTrendingExperiences()),
-            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // Explore Section 2: Curated Trip Packages Showcase
-            SliverToBoxAdapter(child: _buildCuratedPackagesSection()),
-            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                // Explore Section 1: Top Trending Experiences Carousel
+                SliverToBoxAdapter(child: _buildTrendingExperiences()),
+                const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-            // Explore Section 3: Trust & Guarantee Banner
-            SliverToBoxAdapter(child: _buildTrustFooterBanner()),
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                // Explore Section 2: Curated Trip Packages Showcase
+                SliverToBoxAdapter(child: _buildCuratedPackagesSection()),
+                const SliverToBoxAdapter(child: SizedBox(height: 28)),
+
+                // Explore Section 3: Trust & Guarantee Banner
+                SliverToBoxAdapter(child: _buildTrustFooterBanner()),
+                const SliverToBoxAdapter(child: SizedBox(height: 72)),
+              ],
+            ),
+
+            // Sleek Floating Cart Bar (Home screen only, non-intrusive)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 12,
+              child: _buildFloatingCartBar(),
+            ),
           ],
         ),
       ),
     );
   }
 
+  // ── Floating Cart Bar ──────────────────────────────────────────────────────
+  Widget _buildFloatingCartBar() {
+    return Obx(() {
+      final isSolo = _isSolo;
+      final count = _cartController.itemCountFor(isSolo);
+      final city = _cartController.activeCityFor(isSolo).value;
+
+      if (count == 0 || city == null) {
+        return const SizedBox.shrink();
+      }
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.28),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.shopping_bag_outlined,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          city.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$count item${count > 1 ? 's' : ''}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    _cartController.progressStatusTextFor(isSolo),
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.5,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: () => _openCart(city),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Resume',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 13,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   // ── Upgraded Header ───────────────────────────────────────────────────────
   Widget _buildUpgradedHeader(String userName) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
@@ -588,47 +424,67 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Top Swiggy-Style Action Row: Squad Pill on left, Cart & Notifications on right
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // 1. Swiggy-Style Squad Selector Pill (Location Style)
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => SwiggyGroupRosterSheet.show(context),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Obx(() {
-                      final selected = _groupController.selectedGroup.value;
-                      final memberCount = selected != null
-                          ? _groupController.getMembersForGroup(selected.id).length
-                          : 0;
-
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.groups_rounded,
-                            color: Color(0xFFFC8019), // Swiggy Orange
-                            size: 16,
+          // User Greeting & Avatar
+          Expanded(
+            child: Row(
+              children: [
+                GestureDetector(
+                  onLongPress: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (mounted) context.go('/login');
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFC8019),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const CircleAvatar(
+                          radius: 22,
+                          backgroundColor: AppColors.primaryLight,
+                          backgroundImage:
+                              NetworkImage('https://i.pravatar.cc/150?img=11'),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF60B246),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 6),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 9,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
                           Flexible(
                             child: Text(
-                              selected != null
-                                  ? '${selected.name} (${memberCount > 0 ? '$memberCount joined' : 'Squad'})'
-                                  : 'Select Travel Squad',
+                              'Hey, $userName',
                               style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
                                 color: AppColors.darkCharcoal,
                               ),
                               maxLines: 1,
@@ -636,245 +492,79 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: AppColors.textMuted,
-                            size: 14,
-                          ),
+                          const Text('👋', style: TextStyle(fontSize: 18)),
                         ],
-                      );
-                    }),
-                  ),
-                ),
-              ),
-
-              // 2. Right Side Actions: Cart Progress Pill + Notifications Bell
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Swiggy-Style Cart Itinerary Pill
-                  Obx(() {
-                    final count = _cartController.itemCount;
-                    final activeCity = _cartController.activeCity.value;
-
-                    return GestureDetector(
-                      onTap: () {
-                        if (count > 0 && activeCity != null) {
-                          _openCart(activeCity);
-                        } else {
-                          _showCartSheet();
-                        }
-                      },
-                      onLongPress: _showCartSheet,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: count > 0
-                              ? const Color(0xFFFFF7ED)
-                              : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: count > 0
-                                ? const Color(0xFFFC8019)
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.shopping_bag_outlined,
-                              size: 15,
-                              color: count > 0
-                                  ? const Color(0xFFFC8019)
-                                  : AppColors.textSecondary,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              count > 0 ? '$count in Cart' : 'Cart',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: count > 0
-                                    ? const Color(0xFFFC8019)
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-                    );
-                  }),
-                  const SizedBox(width: 4),
-
-                  // Notifications Bell with Live Badge
-                  Obx(() {
-                    final inviteCount = _groupController.pendingInvitesCount.value;
-
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                          icon: const Icon(
-                            Icons.notifications_outlined,
-                            color: AppColors.darkCharcoal,
-                            size: 22,
-                          ),
-                          tooltip: 'Group Invitations',
-                          onPressed: () async {
-                            await context.push('/invites');
-                            _groupController.fetchPendingInvitesCount();
-                          },
-                        ),
-                        if (inviteCount > 0)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFF0052),
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                inviteCount > 9 ? '9+' : '$inviteCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  }),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // User Greeting & Avatar
-          Row(
-            children: [
-              GestureDetector(
-                onLongPress: () async {
-                  await Supabase.instance.client.auth.signOut();
-                  if (mounted) context.go('/login');
-                },
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFC8019),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const CircleAvatar(
-                        radius: 22,
-                        backgroundColor: AppColors.primaryLight,
-                        backgroundImage:
-                            NetworkImage('https://i.pravatar.cc/150?img=11'),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF60B246),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 9,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
                       Text(
-                        'Hey, $userName',
+                        'Where are we traveling next?',
                         style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkCharcoal,
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Text('👋', style: TextStyle(fontSize: 18)),
                     ],
                   ),
-                  Text(
-                    'Where are we traveling next?',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+
+          // Notifications Bell with Live Badge
+          Obx(() {
+            final inviteCount = _groupController.pendingInvitesCount.value;
+
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 38, minHeight: 38),
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: AppColors.darkCharcoal,
+                    size: 24,
+                  ),
+                  tooltip: 'Group Invitations',
+                  onPressed: () async {
+                    await context.push('/invites');
+                    _groupController.fetchPendingInvitesCount();
+                  },
+                ),
+                if (inviteCount > 0)
+                  Positioned(
+                    right: 2,
+                    top: 2,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF0052),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        inviteCount > 9 ? '9+' : '$inviteCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            );
+          }),
         ],
       ),
     );
   }
 
-  // ── Mode Explanation Card ─────────────────────────────────────────────────
-  Widget _buildModeBanner() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: _isSolo ? const Color(0xFFFFF0F5) : const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _isSolo ? const Color(0xFFFFCCE1) : const Color(0xFFBFDBFE),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _isSolo ? Icons.person_pin_circle : Icons.groups_rounded,
-            color: _isSolo ? AppColors.punchPink : AppColors.electricBlue,
-            size: 20,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _isSolo
-                  ? 'Solo Mode: Build your itinerary cart and match with open travel squads!'
-                  : 'Squad Mode: Custom-build trip details and get quotes from verified local operators.',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.darkCharcoal,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // ── Destination Search Bar ────────────────────────────────────────────────
   Widget _buildSearchBar() {
@@ -883,12 +573,13 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -897,19 +588,19 @@ class _HomeScreenState extends State<HomeScreen> {
           onChanged: (val) =>
               setState(() => _searchQuery = val.trim().toLowerCase()),
           style: GoogleFonts.poppins(
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: FontWeight.w600,
-            color: AppColors.darkCharcoal,
+            color: const Color(0xFF0F172A),
           ),
           decoration: InputDecoration(
-            hintText: 'Search destinations (e.g. Manali, Goa, Jaipur)...',
+            hintText: 'Search destinations',
             hintStyle:
-                GoogleFonts.poppins(fontSize: 13, color: AppColors.textMuted),
+                GoogleFonts.poppins(fontSize: 13.5, color: const Color(0xFF94A3B8)),
             prefixIcon:
-                const Icon(Icons.search, color: Color(0xFFFC8019), size: 22),
+                const Icon(Icons.search, color: Color(0xFF0F172A), size: 20),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
+                    icon: const Icon(Icons.clear, size: 18, color: Color(0xFF64748B)),
                     onPressed: () {
                       _searchController.clear();
                       setState(() => _searchQuery = '');
@@ -919,18 +610,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     margin: const EdgeInsets.all(8),
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFC8019).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.tune_rounded,
-                      color: Color(0xFFFC8019),
-                      size: 16,
+                      color: Color(0xFF0F172A),
+                      size: 15,
                     ),
                   ),
             border: InputBorder.none,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           ),
         ),
       ),
@@ -940,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Vibe Category Filters ─────────────────────────────────────────────────
   Widget _buildVibeCategories() {
     return SizedBox(
-      height: 38,
+      height: 40,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         scrollDirection: Axis.horizontal,
@@ -954,27 +645,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
           return InkWell(
             onTap: () => setState(() => _selectedCategory = name),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF1E2430) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: isSelected ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isSelected
-                      ? const Color(0xFF1E2430)
+                      ? const Color(0xFF0F172A)
                       : const Color(0xFFE2E8F0),
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 6,
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.18),
+                          blurRadius: 8,
                           offset: const Offset(0, 3),
                         )
                       ]
-                    : [],
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Row(
                 children: [
@@ -982,8 +679,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon,
                     size: 15,
                     color: isSelected
-                        ? const Color(0xFFFC8019)
-                        : AppColors.textSecondary,
+                        ? Colors.white
+                        : const Color(0xFF64748B),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -991,8 +688,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.w600,
-                      color: isSelected ? Colors.white : AppColors.darkCharcoal,
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? Colors.white : const Color(0xFF334155),
                     ),
                   ),
                 ],
@@ -1008,189 +705,223 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDestinationExploreCard(CityCatalog city) {
     return InkWell(
       onTap: () => _openCart(city),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(24),
       child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Banner Image & Badges
-          Stack(
-            children: [
-              SizedBox(
-                height: 160,
-                width: double.infinity,
-                child: Image.network(
-                  city.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: city.accent.withValues(alpha: 0.2),
-                    child: Icon(Icons.landscape, size: 48, color: city.accent),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Banner Image & Badges
+            Stack(
+              children: [
+                SizedBox(
+                  height: 195,
+                  width: double.infinity,
+                  child: Image.network(
+                    city.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: const Color(0xFFF1F5F9),
+                      child: const Icon(Icons.landscape, size: 48, color: Color(0xFF94A3B8)),
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                height: 160,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.75),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                Container(
+                  height: 195,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF60B246),
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.1),
+                        Colors.black.withValues(alpha: 0.75),
+                      ],
+                      stops: const [0.35, 0.65, 1.0],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                ),
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          '4.9 (1.2k+)',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 14,
+                  right: 14,
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.favorite_border_rounded,
+                      color: Color(0xFF0F172A),
+                      size: 16,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 14,
+                  left: 16,
+                  right: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.star, color: Colors.white, size: 12),
-                      const SizedBox(width: 3),
                       Text(
-                        '4.9 (1.2k+)',
+                        city.name,
                         style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${city.hotels.length + city.activities.length + city.places.length} Experiences',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 12,
-                left: 14,
-                right: 14,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      city.name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      city.tagline,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          // Action & Info Row
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ESTIMATED AVG BUDGET',
-                      style: GoogleFonts.poppins(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textMuted,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      'From ₹15,000 / person',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkCharcoal,
-                      ),
-                    ),
-                  ],
-                ),
-                ElevatedButton(
-                  onPressed: () => _openCart(city),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFC8019),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Row(
-                    children: [
                       Text(
-                        'Build Itinerary',
+                        city.tagline,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_rounded,
-                          size: 14, color: Colors.white),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+
+            // Action & Info Section
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Budget Row with clean layout
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ESTIMATED AVG BUDGET',
+                            style: GoogleFonts.poppins(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF64748B),
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'From ₹15,000 / person',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          'Verified Stays',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF475569),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  // Dedicated Action Button (Pill shaped, rich Dark Blue)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => _openCart(city),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryDarkBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        alignment: Alignment.center,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Build Itinerary',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_rounded,
+                              size: 16, color: Colors.white),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ── Explore Section 1: Trending Experiences ───────────────────────────────
   Widget _buildTrendingExperiences() {
@@ -1199,32 +930,32 @@ class _HomeScreenState extends State<HomeScreen> {
         'title': 'Marine Drive Sunset Cruise',
         'city': 'Mumbai',
         'price': '₹2,200',
-        'icon': Icons.directions_boat,
-        'color': const Color(0xFF2373F4),
+        'icon': Icons.directions_boat_rounded,
+        'color': const Color(0xFF0F172A),
         'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
       },
       {
         'title': 'Sunset Mandovi Cruise',
         'city': 'Goa',
         'price': '₹1,800',
-        'icon': Icons.directions_boat,
-        'color': const Color(0xFFFF0052),
+        'icon': Icons.directions_boat_rounded,
+        'color': const Color(0xFF0F172A),
         'cityObj': mockCities.firstWhere((c) => c.id == 'goa'),
       },
       {
         'title': 'Sunrise Hot Air Balloon',
         'city': 'Jaipur',
         'price': '₹8,500',
-        'icon': Icons.air,
-        'color': const Color(0xFF9564DD),
+        'icon': Icons.air_rounded,
+        'color': const Color(0xFF0F172A),
         'cityObj': mockCities.firstWhere((c) => c.id == 'jaipur'),
       },
       {
         'title': 'Lake Pichola Sunset Boat',
         'city': 'Udaipur',
         'price': '₹1,200',
-        'icon': Icons.sailing,
-        'color': const Color(0xFF10B981),
+        'icon': Icons.sailing_rounded,
+        'color': const Color(0xFF0F172A),
         'cityObj': mockCities.firstWhere((c) => c.id == 'udaipur'),
       },
     ];
@@ -1234,60 +965,47 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '🔥 Top Must-Do Experiences',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkCharcoal,
-                ),
-              ),
-              Text(
-                'Swipe right →',
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          child: Text(
+            'Top Must-Do Experiences',
+            style: GoogleFonts.poppins(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
+              letterSpacing: -0.2,
+            ),
           ),
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 125,
+          height: 148,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             scrollDirection: Axis.horizontal,
             itemCount: experiences.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
             itemBuilder: (context, index) {
               final exp = experiences[index];
               final title = exp['title'] as String;
               final cityName = exp['city'] as String;
               final price = exp['price'] as String;
               final icon = exp['icon'] as IconData;
-              final color = exp['color'] as Color;
               final cityObj = exp['cityObj'] as CityCatalog;
 
               return InkWell(
                 onTap: () => _openCart(cityObj),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  width: 190,
-                  padding: const EdgeInsets.all(12),
+                  width: 200,
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -1301,24 +1019,25 @@ class _HomeScreenState extends State<HomeScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(icon, color: color, size: 20),
+                            child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(6),
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
                             child: Text(
                               cityName,
                               style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary,
+                                color: const Color(0xFF64748B),
                               ),
                             ),
                           ),
@@ -1334,15 +1053,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.darkCharcoal,
+                              color: const Color(0xFF0F172A),
                             ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             price,
                             style: GoogleFonts.poppins(
-                              fontSize: 12,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF60B246),
+                              color: const Color(0xFF0F172A),
                             ),
                           ),
                         ],
@@ -1360,98 +1080,272 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Explore Section 2: Curated Trip Packages ──────────────────────────────
   Widget _buildCuratedPackagesSection() {
-    final packages = [
+    final groupPackages = [
       {
-        'title': 'Mumbai Coastal & Bollywood Vibes',
-        'days': '3 Days / 2 Nights',
-        'vibe': '🌆 Urban & Coastal',
+        'title': 'Goa Beach Villa & Yacht Party',
+        'days': '4 Days / 3 Nights',
+        'vibe': 'Squad Beach & Nightlife',
         'badge': 'BESTSELLER',
-        'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
-      },
-      {
-        'title': 'Goa Sunsets, Beaches & Shacks',
-        'days': '5 Days / 4 Nights',
-        'vibe': '🏖️ Beach Party',
-        'badge': 'POPULAR',
+        'price': '₹4,999/pax',
+        'highlights': 'Private Villa • Scuba Diving • Sunset Yacht',
         'cityObj': mockCities.firstWhere((c) => c.id == 'goa'),
       },
       {
-        'title': 'Jaipur Royal Palaces & Bazaars',
+        'title': 'Udaipur Royal Haveli & Heritage Feast',
         'days': '3 Days / 2 Nights',
-        'vibe': '🏰 Royal Heritage',
+        'vibe': 'Heritage Forts & Group Dining',
+        'badge': 'POPULAR',
+        'price': '₹6,500/pax',
+        'highlights': 'Heritage Suite • Lake Cruise • Candlelight Dinner',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'udaipur'),
+      },
+      {
+        'title': 'Jaipur Fort Treks & Grand Bazaar',
+        'days': '3 Days / 2 Nights',
+        'vibe': 'Palaces & Cultural Squad Tours',
         'badge': 'FEATURED',
+        'price': '₹5,200/pax',
+        'highlights': 'Nahargarh Sunset • Jeep Safari • Chokhi Dhani',
         'cityObj': mockCities.firstWhere((c) => c.id == 'jaipur'),
       },
       {
-        'title': 'Udaipur Royal Lakes & Sunsets',
-        'days': '4 Days / 3 Nights',
-        'vibe': '⛵ Romantic Lakes',
+        'title': 'Mumbai Coastal Cruise & Street Eats',
+        'days': '2 Days / 1 Night',
+        'vibe': 'Urban Night Squad Trails',
         'badge': 'EXCLUSIVE',
-        'cityObj': mockCities.firstWhere((c) => c.id == 'udaipur'),
+        'price': '₹3,800/pax',
+        'highlights': 'Marine Drive Cruise • Street Food Trail • Midnight Cycling',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
       },
     ];
+
+    final soloPackages = [
+      {
+        'title': 'Goa Hostels, Scuba & Co-Working',
+        'days': '5 Days / 4 Nights',
+        'vibe': 'Surfing, Cafes & Co-Working',
+        'badge': 'BESTSELLER',
+        'price': '₹4,499/pax',
+        'highlights': 'Beach Hostel Dorm • Scuba Intro • Co-working Pass',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'goa'),
+      },
+      {
+        'title': 'Udaipur Photography & Old City Walks',
+        'days': '3 Days / 2 Nights',
+        'vibe': 'Heritage Strolls & Lake Sunsets',
+        'badge': 'POPULAR',
+        'price': '₹5,800/pax',
+        'highlights': 'Boutique Stay • Photo Walk • Ghat Sunsets',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'udaipur'),
+      },
+      {
+        'title': 'Jaipur Cultural Immersion & Pottery',
+        'days': '3 Days / 2 Nights',
+        'vibe': 'Art, Crafts & Local Cafes',
+        'badge': 'FEATURED',
+        'price': '₹4,900/pax',
+        'highlights': 'Heritage Homestay • Blue Pottery Workshop • Cafe Hopping',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'jaipur'),
+      },
+      {
+        'title': 'Mumbai Art Deco & Heritage Trail',
+        'days': '2 Days / 1 Night',
+        'vibe': 'Solo City Explorations',
+        'badge': 'EXCLUSIVE',
+        'price': '₹3,200/pax',
+        'highlights': 'Colaba Art Walk • Seaside Cafes • Sunset at Marine Drive',
+        'cityObj': mockCities.firstWhere((c) => c.id == 'mumbai'),
+      },
+    ];
+
+    final activePackages = _isSolo ? soloPackages : groupPackages;
+    final sectionTitle = _isSolo ? 'Curated Solo Packages' : 'Curated Group Packages';
+    final sectionSubtitle = _isSolo
+        ? 'Handpicked solo getaways with verified stays & community vibes'
+        : 'Pre-configured squad getaways with verified group discounts';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  sectionTitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                    letterSpacing: -0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _isSolo ? 'Solo Mode' : 'Group Mode',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
           Text(
-            '🎒 Curated Squad & Solo Packages',
+            sectionSubtitle,
             style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkCharcoal,
+              fontSize: 12,
+              color: const Color(0xFF64748B),
             ),
           ),
-          const SizedBox(height: 12),
-          ...packages.map((pkg) {
+
+          const SizedBox(height: 14),
+          ...activePackages.map((pkg) {
             final cityObj = pkg['cityObj'] as CityCatalog;
+            final badge = pkg['badge'] as String;
+            final price = pkg['price'] as String;
+            final highlights = pkg['highlights'] as String;
+
             return Container(
-              margin: const EdgeInsets.only(bottom: 10),
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                title: Text(
-                  pkg['title'] as String,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkCharcoal,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          pkg['title'] as String,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          badge,
+                          style: GoogleFonts.poppins(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                subtitle: Text(
-                  '${pkg['days']} • ${pkg['vibe']}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                trailing: ElevatedButton(
-                  onPressed: () => _openCart(cityObj),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFF3EB),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${pkg['days']} • ${pkg['vibe']}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      color: const Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  child: Text(
-                    'Explore',
+                  const SizedBox(height: 4),
+                  Text(
+                    highlights,
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFFFC8019),
+                      color: const Color(0xFF94A3B8),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Package Starting',
+                            style: GoogleFonts.poppins(
+                              fontSize: 9.5,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                          Text(
+                            price,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () => _openCart(cityObj),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                'View',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_forward_rounded,
+                                  size: 12, color: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             );
           }),
@@ -1464,10 +1358,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTrustFooterBanner() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E2430),
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -1475,7 +1376,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.verified_user_outlined,
-                  color: Color(0xFFFC8019), size: 20),
+                  color: Colors.white, size: 20),
               const SizedBox(width: 8),
               Text(
                 'WHY PLAN WITH JOURNEY?',
@@ -1488,20 +1389,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _trustFeatureTile(
-                    Icons.bolt, 'Fast Quotes', 'Within 24h'),
+                    Icons.bolt_rounded, 'Fast Quotes', 'Within 24h'),
               ),
               Expanded(
                 child: _trustFeatureTile(
-                    Icons.group_work, 'Squad Match', 'Per person budget'),
+                    Icons.group_work_rounded, 'Squad Match', 'Per person budget'),
               ),
               Expanded(
                 child: _trustFeatureTile(
-                    Icons.shield, '100% Verified', 'Local operators'),
+                    Icons.shield_rounded, '100% Verified', 'Local operators'),
               ),
             ],
           ),
@@ -1513,8 +1414,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _trustFeatureTile(IconData icon, String title, String sub) {
     return Column(
       children: [
-        Icon(icon, color: const Color(0xFFFC8019), size: 20),
-        const SizedBox(height: 4),
+        Icon(icon, color: Colors.white, size: 22),
+        const SizedBox(height: 6),
         Text(
           title,
           style: GoogleFonts.poppins(
@@ -1527,8 +1428,8 @@ class _HomeScreenState extends State<HomeScreen> {
           sub,
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
-            fontSize: 9,
-            color: Colors.white60,
+            fontSize: 9.5,
+            color: const Color(0xFF94A3B8),
           ),
         ),
       ],

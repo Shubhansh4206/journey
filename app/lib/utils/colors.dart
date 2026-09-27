@@ -1,42 +1,47 @@
 import 'package:flutter/material.dart';
 
 /// ── Theme Color Palette ──────────────────────────────────────────────────
-/// Indigo Accent & Clean Light / Modern UI matching user specifications.
+/// Restrained luxury palette: White, Dark Blue (#0A2647), Grey, and Black
 class AppColors {
   AppColors._();
 
-  // ── Primary ───────────────────────────────────────────────────────────────
-  static const Color primary = Colors.indigoAccent;
-  static const Color primaryDark = Color(0xFF3F51B5);
-  static const Color primaryLight = Color(0xFFE0E7FF);
-  static const Color primaryMuted = Color(0x1F536DFE); // 12% opacity
+  // ── Primary Brand Tokens ───────────────────────────────────────────────────
+  static const Color primaryDarkBlue = Color(0xFF0A2647); // Deep Navy Hero CTA
+  static const Color primary = primaryDarkBlue;
+  static const Color primaryDark = Color(0xFF06172D);
+  static const Color primaryLight = Color(0xFFE8EEF5);
+  static const Color primaryMuted = Color(0x1F0A2647); // 12% opacity
 
-  // ── Backgrounds ───────────────────────────────────────────────────────────
-  static const Color background = Colors.white;
+  // ── Backgrounds & Surfaces ─────────────────────────────────────────────────
+  static const Color pureWhite = Color(0xFFFFFFFF);
+  static const Color background = pureWhite;
+  static const Color softGrey = Color(0xFFF5F6F8);
   static const Color scaffoldBackground = Color(0xFFF8FAFC);
-  static const Color surface = Colors.white;
-  static const Color inputFill = Color(0xFFF1F4FF);
+  static const Color surface = pureWhite;
+  static const Color inputFill = Color(0xFFF5F6F8);
 
-  // ── Text ──────────────────────────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color textMuted = Color(0xFF94A3B8);
+  // ── Text & Typography ──────────────────────────────────────────────────────
+  static const Color nearBlack = Color(0xFF1A1A1A);
+  static const Color textPrimary = nearBlack;
+  static const Color mediumGrey = Color(0xFF64748B);
+  static const Color textSecondary = mediumGrey;
+  static const Color textMuted = Color(0xFF9AA0A6);
 
-  // ── Borders ───────────────────────────────────────────────────────────────
+  // ── Borders & Dividers ─────────────────────────────────────────────────────
   static const Color border = Color(0xFFE2E8F0);
-  static const Color borderFocused = Colors.indigoAccent;
+  static const Color borderFocused = primaryDarkBlue;
 
-  // ── Social & Semantic ─────────────────────────────────────────────────────
+  // ── Semantic / Functional Status Colors (Preserved for meaning) ─────────────
   static const Color googleButton = Color(0xFFFBC02D);
   static const Color danger = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
   static const Color success = Color(0xFF10B981);
 
-  // ── New Home Screen Colors ──────────────────────────────────────────────────
-  static const Color offWhite = Color(0xFFF8F9FA);
-  static const Color darkCharcoal = Color(0xFF1A1A1A);
-  static const Color electricBlue = Color(0xFF2373F4);
-  static const Color vibrantPurple = Color(0xFF9564DD);
-  static const Color punchPink = Color(0xFFFF0052);
-  static const Color electricYellow = Color(0xFFFFD400);
+  // ── Legacy aliases mapped to harmonious tokens ─────────────────────────────
+  static const Color offWhite = softGrey;
+  static const Color darkCharcoal = nearBlack;
+  static const Color electricBlue = primaryDarkBlue;
+  static const Color vibrantPurple = primaryDarkBlue;
+  static const Color punchPink = Color(0xFFE11D48);
+  static const Color electricYellow = Color(0xFFF59E0B);
 }

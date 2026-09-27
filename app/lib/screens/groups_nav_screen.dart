@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controllers/group_controller.dart';
 import '../models/group_models.dart';
 import '../models/trip_request.dart';
+import '../screens/confirmed_trip_dashboard_screen.dart';
 import '../screens/group_picker_sheet.dart';
 import '../utils/colors.dart';
 import '../widgets/swiggy_group_roster_sheet.dart';
@@ -67,28 +68,27 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              'Travel Squads & Groups',
-              style: GoogleFonts.poppins(
-                color: AppColors.darkCharcoal,
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
+            Expanded(
+              child: Text(
+                'Groups',
+                style: GoogleFonts.poppins(
+                  color: AppColors.darkCharcoal,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary),
-            tooltip: 'Sync Groups & Requests',
-            onPressed: () => _groupController.refreshAll(),
-          ),
-          IconButton(
             icon: const Icon(Icons.tune_rounded, color: AppColors.textSecondary),
             tooltip: 'Manage Roster',
             onPressed: () => SwiggyGroupRosterSheet.show(context),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
         ],
       ),
       body: RefreshIndicator(
@@ -104,6 +104,9 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Confirmed Groups Summary Card (Phase 2) ───────────────────
+              _buildConfirmedGroupsSummaryCard(),
+
               // ── Sent Trip Requests Section (Realtime Live Tracking) ────────
               _buildSentTripRequestsSection(),
 
@@ -124,6 +127,183 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
       ),
     );
   }
+
+  // ── Confirmed Groups Summary Card (Phase 2) ──────────────────────────────
+  Widget _buildConfirmedGroupsSummaryCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.verified_rounded,
+                    color: Color(0xFF059669), size: 16),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Confirmed Trips',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkCharcoal,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ConfirmedTripDashboardScreen(),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              height: 175,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                image: const DecorationImage(
+                  image: NetworkImage(
+                    'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1000&q=80',
+                  ),
+                  fit: BoxFit.cover,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.3),
+                      Colors.black.withValues(alpha: 0.88),
+                    ],
+                    stops: const [0.2, 0.5, 1.0],
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Status Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded,
+                              color: Colors.white, size: 11),
+                          const SizedBox(width: 4),
+                          Text(
+                            'All payments cleared',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Bottom info: Destination, Squad & Dates
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Goa Beach Villa & Scuba Squad',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            const Icon(Icons.groups_rounded,
+                                color: Colors.white70, size: 12),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'Goa Sunshine Squad (6 Travelers)',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '• 15-18 Oct',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFFFFD400),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '📍 Stay: Casa Baga Beachfront Resort',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 10.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   // ── Sent Trip Requests Section (Realtime Live Tracking) ───────────────────
   Widget _buildSentTripRequestsSection() {
@@ -807,72 +987,71 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.groups_rounded,
-                          color: Color(0xFFFC8019), size: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'My Travel Squads',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkCharcoal,
-                      ),
-                    ),
-                    if (groups.isNotEmpty) ...[
-                      const SizedBox(width: 8),
+                Expanded(
+                  child: Row(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color:
-                              const Color(0xFFFC8019).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                          color: const Color(0xFFFFF7ED),
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: const Icon(Icons.groups_rounded,
+                            color: Color(0xFFFC8019), size: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
                         child: Text(
-                          '${groups.length}',
+                          'Squads',
                           style: GoogleFonts.poppins(
-                            fontSize: 10,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFFFC8019),
+                            color: AppColors.darkCharcoal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (groups.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFFC8019).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${groups.length}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFFC8019),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
+                const SizedBox(width: 6),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextButton.icon(
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline_rounded,
+                          size: 20, color: Color(0xFFFC8019)),
                       onPressed: () {
                         context.push('/create-group').then((_) {
                           _groupController.refreshAll();
                         });
                       },
-                      icon: const Icon(Icons.add,
-                          size: 14, color: Color(0xFFFC8019)),
-                      label: Text(
-                        'New Squad',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFFC8019),
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'New Squad',
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     IconButton(
                       icon: const Icon(Icons.tune_rounded,
                           size: 16, color: AppColors.textSecondary),
