@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ReactFlow,
   Controls,
@@ -32,13 +33,15 @@ import {
   Car, 
   ArrowLeft,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Calendar,
+  Layers,
+  Check
 } from 'lucide-react';
 import Link from 'next/link';
+import { TripRequest } from '../../lib/types';
 
 // --- 1. CUSTOM NODE COMPONENTS ---
-// These dictate how the JSON payload visually renders on the canvas
-
 const HotelNode = ({ data }: NodeProps<Node>) => (
   <div className="w-64 rounded-xl border-2 border-blue-400/80 bg-white dark:bg-slate-900 p-4 shadow-lg shadow-blue-500/10 transition-all hover:shadow-blue-500/20">
     <Handle type="target" position={Position.Top} className="!h-3 !w-3 !bg-blue-500" />
@@ -55,11 +58,18 @@ const HotelNode = ({ data }: NodeProps<Node>) => (
       <BedDouble className="mr-2 h-5 w-5 shrink-0 text-blue-500" />
       <span className="truncate">{data.title ? String(data.title) : 'Hotel Stay'}</span>
     </div>
-    {Boolean(data.cost || data.price) && (
-      <div className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">
-        ₹{Number(data.cost || data.price).toLocaleString()}
-      </div>
-    )}
+    <div className="mt-2 flex items-center justify-between">
+      {Boolean(data.cost || data.price) && (
+        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 font-mono">
+          ₹{Number(data.cost || data.price).toLocaleString()}
+        </span>
+      )}
+      {Boolean(data.badge) && (
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/50 text-blue-300 border border-blue-800/40">
+          {String(data.badge)}
+        </span>
+      )}
+    </div>
     <Handle type="source" position={Position.Bottom} className="!h-3 !w-3 !bg-blue-500" />
   </div>
 );
@@ -80,11 +90,18 @@ const PlaceNode = ({ data }: NodeProps<Node>) => (
       <MapPin className="mr-2 h-5 w-5 shrink-0 text-emerald-500" />
       <span className="truncate">{data.title ? String(data.title) : 'Sightseeing Place'}</span>
     </div>
-    {Boolean(data.cost || data.price) && (
-      <div className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-        ₹{Number(data.cost || data.price).toLocaleString()}
-      </div>
-    )}
+    <div className="mt-2 flex items-center justify-between">
+      {Boolean(data.cost !== undefined || data.price !== undefined) && (
+        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+          {Number(data.cost || data.price) > 0 ? `₹${Number(data.cost || data.price).toLocaleString()}` : 'Free Entry'}
+        </span>
+      )}
+      {Boolean(data.badge) && (
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 border border-emerald-800/40">
+          {String(data.badge)}
+        </span>
+      )}
+    </div>
     <Handle type="source" position={Position.Bottom} className="!h-3 !w-3 !bg-emerald-500" />
   </div>
 );
@@ -105,11 +122,18 @@ const ActivityNode = ({ data }: NodeProps<Node>) => (
       <Sparkles className="mr-2 h-5 w-5 shrink-0 text-purple-500" />
       <span className="truncate">{data.title ? String(data.title) : 'Adventure Activity'}</span>
     </div>
-    {Boolean(data.cost || data.price) && (
-      <div className="mt-2 text-xs font-medium text-purple-600 dark:text-purple-400">
-        ₹{Number(data.cost || data.price).toLocaleString()}
-      </div>
-    )}
+    <div className="mt-2 flex items-center justify-between">
+      {Boolean(data.cost || data.price) && (
+        <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 font-mono">
+          ₹{Number(data.cost || data.price).toLocaleString()}
+        </span>
+      )}
+      {Boolean(data.badge) && (
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-950/50 text-purple-300 border border-purple-800/40">
+          {String(data.badge)}
+        </span>
+      )}
+    </div>
     <Handle type="source" position={Position.Bottom} className="!h-3 !w-3 !bg-purple-500" />
   </div>
 );
@@ -156,13 +180,18 @@ const TransferNode = ({ data }: NodeProps<Node>) => (
 
 // --- 2. MAIN CANVAS COMPONENT ---
 function CanvasInner() {
+  const searchParams = useSearchParams();
+  const paramTripId = searchParams.get('trip_id');
+
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [agentThoughts, setAgentThoughts] = useState<string>('');
   
-  // Trip request ID provided for testing
-  const [tripId, setTripId] = useState<string>('0ec1aea6-9bb9-45a4-963a-e2c994ff7997');
+  // Trip request state
+  const [tripId, setTripId] = useState<string>(paramTripId || '0ec1aea6-9bb9-45a4-963a-e2c994ff7997');
+  const [currentTrip, setCurrentTrip] = useState<TripRequest | null>(null);
+  const [hasAiGenerated, setHasAiGenerated] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   const { fitView } = useReactFlow();
@@ -174,13 +203,137 @@ function CanvasInner() {
     activityNode: ActivityNode,
     flightNode: FlightNode,
     transferNode: TransferNode,
-    // Aliases to handle common naming
     hotel: HotelNode,
     place: PlaceNode,
     activity: ActivityNode,
     flight: FlightNode,
     transfer: TransferNode
   }), []);
+
+  // Sync with searchParams
+  useEffect(() => {
+    if (paramTripId && paramTripId !== tripId) {
+      setTripId(paramTripId);
+      setHasAiGenerated(false);
+    }
+  }, [paramTripId]);
+
+  // Load trip request and initial nodes for selected items
+  useEffect(() => {
+    if (!tripId) return;
+    loadTripAndInitialNodes(tripId);
+  }, [tripId]);
+
+  const loadTripAndInitialNodes = async (id: string) => {
+    try {
+      const res = await fetch(`/api/trip-requests?id=${encodeURIComponent(id.trim())}`);
+      if (!res.ok) {
+        setAgentThoughts(`Trip Request #${id.slice(0, 8)}... not found.\nClick "Dashboard" to pick an active request.`);
+        return;
+      }
+
+      const json = await res.json();
+      const trip: TripRequest = json.trip_request;
+      const hydrated = json.hydrated_items || { hotels: [], places: [], activities: [], transport: [] };
+      setCurrentTrip(trip);
+
+      // Hydrate customer-selected items onto canvas
+      const initialNodes: Node[] = [];
+      let nodeIdx = 0;
+
+      // 1. Hotels
+      (hydrated.hotels || []).forEach((h: any) => {
+        initialNodes.push({
+          id: `init-hotel-${h.id}`,
+          type: 'hotelNode',
+          position: { x: 100 + (nodeIdx % 2) * 320, y: 80 + Math.floor(nodeIdx / 2) * 160 },
+          data: {
+            title: h.name,
+            day: 1,
+            time: 'Overnight Stay',
+            cost: h.contracted_rate_per_night,
+            badge: 'Traveler Selected'
+          }
+        });
+        nodeIdx++;
+      });
+
+      // 2. Places
+      (hydrated.places || []).forEach((p: any) => {
+        initialNodes.push({
+          id: `init-place-${p.id}`,
+          type: 'placeNode',
+          position: { x: 100 + (nodeIdx % 2) * 320, y: 80 + Math.floor(nodeIdx / 2) * 160 },
+          data: {
+            title: p.name,
+            day: 1,
+            time: `${p.recommended_duration_minutes || 60}m Visit`,
+            cost: p.entry_fee_per_person,
+            badge: 'Traveler Selected'
+          }
+        });
+        nodeIdx++;
+      });
+
+      // 3. Activities
+      (hydrated.activities || []).forEach((a: any) => {
+        initialNodes.push({
+          id: `init-activity-${a.id}`,
+          type: 'activityNode',
+          position: { x: 100 + (nodeIdx % 2) * 320, y: 80 + Math.floor(nodeIdx / 2) * 160 },
+          data: {
+            title: a.title,
+            day: 1,
+            time: `${a.duration_minutes || 120}m Activity`,
+            cost: a.cost_per_person,
+            badge: 'Traveler Selected'
+          }
+        });
+        nodeIdx++;
+      });
+
+      // 4. Transport
+      (hydrated.transport || []).forEach((t: any) => {
+        initialNodes.push({
+          id: `init-trans-${t.id}`,
+          type: 'transferNode',
+          position: { x: 100 + (nodeIdx % 2) * 320, y: 80 + Math.floor(nodeIdx / 2) * 160 },
+          data: {
+            title: t.vehicle_type,
+            day: 1,
+            time: 'Chauffeur Transfer',
+            cost: t.cost_per_day,
+            badge: 'Traveler Selected'
+          }
+        });
+        nodeIdx++;
+      });
+
+      setNodes(initialNodes);
+      setEdges([]);
+
+      const dest = trip.destination || 'Destination';
+      const budget = trip.per_person_budget || trip.budget_range?.[0] || 0;
+      const dates = trip.travel_dates || 'Flexible';
+      const groupInfo = trip.assigned_group_name ? ` (${trip.trip_mode || 'Group'}: ${trip.assigned_group_name})` : '';
+
+      setAgentThoughts(
+        `✓ TRIP REQUEST INGESTED: #${id.slice(0, 8)}...\n` +
+        `Destination: ${dest}${groupInfo}\n` +
+        `Dates: ${dates}\n` +
+        `Target Budget: ₹${Number(budget).toLocaleString()}\n\n` +
+        `→ Rendered ${initialNodes.length} customer-selected items on canvas as pre-draft nodes.\n` +
+        `→ Click 'Auto-Draft with AI' to trigger the ReAct Agent to calculate route transit, optimize timing, and connect the itinerary graph.`
+      );
+
+      setTimeout(() => {
+        fitView({ padding: 0.25, duration: 600 });
+      }, 200);
+
+    } catch (e: any) {
+      console.warn('Failed to load trip request context', e);
+    }
+  };
 
   // Standard React Flow dragging & connecting logic
   const onNodesChange = useCallback((changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
@@ -196,9 +349,14 @@ function CanvasInner() {
 
     setIsGenerating(true);
     setSaveStatus(null);
-    setAgentThoughts('Agent initialized. Connecting to tools and fetching trip request context...\n');
+    setAgentThoughts(
+      `Agent initialized for Trip Request #${tripId.slice(0, 8)}...\n` +
+      `Connecting to ReAct tools (calculate_transit_time, check_budget)...\n` +
+      `Fetching contracted inventory from Supabase...\n`
+    );
     
     try {
+      // Automatic UUID transmission to Python Agent Backend
       const response = await fetch('http://localhost:8000/api/v1/agents/generate-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -211,15 +369,14 @@ function CanvasInner() {
       }
 
       const result = await response.json();
+      setHasAiGenerated(true);
       
-      // Inject the AI's data into the canvas state
+      // Inject AI nodes and edges into canvas
       const rawNodes = result.data?.nodes || result.nodes || [];
       const rawEdges = result.data?.edges || result.edges || [];
       
-      // Ensure all nodes have valid position and type mappings
       const formattedNodes: Node[] = rawNodes.map((node: any, idx: number) => {
         let type = node.type || 'placeNode';
-        // Map backend types if they don't have 'Node' suffix
         if (type === 'hotel') type = 'hotelNode';
         else if (type === 'place') type = 'placeNode';
         else if (type === 'activity') type = 'activityNode';
@@ -254,7 +411,7 @@ function CanvasInner() {
       setNodes(formattedNodes);
       setEdges(formattedEdges);
       
-      // Normalize thoughts whether array of objects ({ type, text }), string, or object
+      // Normalize thoughts string/array
       let parsedThoughts = '';
       if (typeof result.agent_thoughts === 'string') {
         parsedThoughts = result.agent_thoughts;
@@ -269,12 +426,12 @@ function CanvasInner() {
       } else if (result.agent_thoughts) {
         parsedThoughts = JSON.stringify(result.agent_thoughts, null, 2);
       } else {
-        parsedThoughts = 'Generated draft successfully with ' + formattedNodes.length + ' itinerary nodes.';
+        parsedThoughts = `Generated draft successfully with ${formattedNodes.length} itinerary nodes.`;
       }
 
       setAgentThoughts(parsedThoughts);
 
-      // Re-center the camera to look at the newly generated graph
+      // Re-center camera to frame the optimized itinerary graph
       setTimeout(() => { 
         fitView({ padding: 0.2, duration: 800 }); 
       }, 200);
@@ -287,23 +444,22 @@ function CanvasInner() {
     }
   };
 
-  // --- FINALIZE AND SAVE TO DB ---
+  // Save to DB
   const handleSave = () => {
-    // Bulk INSERT or save payload to Supabase / local state
     console.log('Saving these nodes to Supabase:', nodes);
     console.log('Saving these edges to Supabase:', edges);
     setSaveStatus(`Saved ${nodes.length} nodes & ${edges.length} edges successfully!`);
-    alert(`Draft saved to database! Check your console to see the JSON payload (${nodes.length} nodes, ${edges.length} edges).`);
+    alert(`Draft saved to database! (${nodes.length} nodes, ${edges.length} edges).`);
   };
 
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-100 overflow-hidden">
       
       {/* LEFT SIDEBAR: Agent Terminal & Controls */}
-      <div className="w-[420px] border-r border-slate-800 bg-slate-900/95 p-6 flex flex-col justify-between shadow-2xl z-10">
+      <div className="w-[430px] border-r border-slate-800 bg-slate-900/95 p-6 flex flex-col justify-between shadow-2xl z-10">
         <div>
           {/* Header navigation & title */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
@@ -321,15 +477,43 @@ function CanvasInner() {
             </Link>
           </div>
 
+          {/* Active Trip Request Badge */}
+          {currentTrip && (
+            <div className="mb-3.5 bg-slate-950/80 p-3 rounded-lg border border-indigo-900/50 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>{currentTrip.destination}</span>
+                  {currentTrip.trip_mode && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/50">
+                      {currentTrip.trip_mode}
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs font-mono font-semibold text-emerald-400">
+                  ₹{Number(currentTrip.per_person_budget || currentTrip.budget_range?.[0] || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-0.5">
+                <span>{currentTrip.travel_dates}</span>
+                <span className="font-mono text-[10px] text-slate-500">
+                  {nodes.length} nodes on canvas
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Trip Request ID input */}
           <div className="mb-4 bg-slate-950/60 p-3 rounded-lg border border-slate-800">
             <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1.5 font-semibold">
-              Trip Request UUID
+              Trip Request UUID (Auto-Selected)
             </label>
             <input
               type="text"
               value={tripId}
-              onChange={(e) => setTripId(e.target.value)}
+              onChange={(e) => {
+                setTripId(e.target.value);
+                setHasAiGenerated(false);
+              }}
               placeholder="e.g. 0ec1aea6-9bb9-45a4-963a-e2c994ff7997"
               className="w-full text-xs font-mono bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-indigo-500 selection:bg-indigo-500/40"
             />
@@ -374,7 +558,7 @@ function CanvasInner() {
         </div>
 
         {/* The Agent "Brain" Display */}
-        <div className="flex-1 flex flex-col rounded-xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl min-h-[300px]">
+        <div className="flex-1 flex flex-col rounded-xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl min-h-[280px]">
           <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-900 px-4 py-2">
             <div className="flex items-center">
               <Terminal className="mr-2 h-3.5 w-3.5 text-emerald-400" />
@@ -417,7 +601,7 @@ function CanvasInner() {
             </div>
             <p className="text-sm font-semibold text-slate-300">Canvas Ready for Auto-Draft</p>
             <p className="text-xs text-slate-500 max-w-sm text-center mt-1">
-              Click &quot;Auto-Draft with AI&quot; on the left to invoke the Gemini backend agent with Trip Request #{tripId.slice(0, 8)}...
+              Trip Request #{tripId.slice(0, 8)}... selected. Click &quot;Auto-Draft with AI&quot; on the left to invoke the Gemini backend agent.
             </p>
           </div>
         )}
@@ -426,11 +610,17 @@ function CanvasInner() {
   );
 }
 
-// React Flow requires the provider to wrap the hooks
+// React Flow requires the provider to wrap the hooks, and useSearchParams requires Suspense in Next.js
 export default function ItineraryStudio() {
   return (
     <ReactFlowProvider>
-      <CanvasInner />
+      <Suspense fallback={
+        <div className="flex h-screen w-full items-center justify-center bg-slate-950 text-slate-400 font-mono text-xs">
+          Loading Itinerary Studio...
+        </div>
+      }>
+        <CanvasInner />
+      </Suspense>
     </ReactFlowProvider>
   );
 }

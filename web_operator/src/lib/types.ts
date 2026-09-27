@@ -19,12 +19,24 @@ export interface TripRequest {
   id: string;
   customer_id?: string | null;
   operator_id?: string | null;
-  status: RequestStatus;
+  group_id?: string | null;
+  status: RequestStatus | string;
   destination: string;
+  trip_mode?: string | null;
+  assigned_group_name?: string | null;
+  start_date?: string;
+  end_date?: string;
   travel_dates: string;
+  per_person_budget?: number;
   budget_range: number[];
   user_preferences?: string | null;
+  selected_hotels?: string[];
+  selected_places?: string[];
+  selected_activities?: string[];
+  selected_transport?: string[];
+  estimated_mock_total?: number | null;
   created_at?: string;
+  updated_at?: string;
   customer_name?: string;
   customer_email?: string;
 }
@@ -154,6 +166,8 @@ export interface OperatorHotel {
   contact_person?: string;
   contact_phone?: string;
   is_active: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -168,6 +182,8 @@ export interface OperatorPlace {
   recommended_duration_minutes?: number;
   tags: string[];
   is_active: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at?: string;
 }
 
@@ -182,6 +198,8 @@ export interface OperatorActivity {
   inclusions: string[];
   restrictions?: Record<string, any>;
   is_active: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -197,6 +215,8 @@ export interface OperatorTransport {
   contact_phone?: string;
   features: string[];
   is_active: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at?: string;
   updated_at?: string;
 }

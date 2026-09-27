@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { TripRequest, RequestStatus } from '../lib/types';
 import { 
   Calendar, 
@@ -11,7 +12,10 @@ import {
   Clock, 
   CheckCircle,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Users,
+  Compass
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -71,19 +75,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
+  const router = useRouter();
+
+  const handleCardClick = (req: TripRequest) => {
+    onSelectRequest(req);
+    router.push(`/studio?trip_id=${encodeURIComponent(req.id)}`);
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-800 mb-6">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
-            <span>Trip Requests</span>
-            <span className="text-xs font-mono text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
-              {requests.length} active
+            <span>Customer Trip Requests</span>
+            <span className="text-xs font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+              {requests.length} in Supabase
             </span>
           </h1>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Incoming inquiries from Supabase <code className="font-mono text-zinc-300">trip_requests</code> table.
+            Click any request to automatically ingest its UUID into the Agentic AI Studio and render selected items on canvas.
           </p>
         </div>
 
@@ -99,7 +110,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 rounded-lg text-xs font-semibold transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 rounded-lg text-xs font-semibold transition-colors shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Request</span>
@@ -127,15 +138,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {requests.map((req) => (
             <div
               key={req.id}
-              onClick={() => onSelectRequest(req)}
-              className="p-4 rounded-xl bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900 cursor-pointer transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+              onClick={() => handleCardClick(req)}
+              className="p-4 rounded-xl bg-zinc-900/70 border border-zinc-800 hover:border-indigo-500/50 hover:bg-zinc-900 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-sm hover:shadow-indigo-500/5"
             >
-              <div className="space-y-1.5 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-white group-hover:text-zinc-100">
+              <div className="space-y-2 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">
                     {req.destination}
                   </h3>
-                  {getStatusBadge(req.status)}
+                  {getStatusBadge(req.status as RequestStatus)}
+                  {req.trip_mode && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-800/60">
+                      {req.trip_mode} {req.assigned_group_name ? `• ${req.assigned_group_name}` : ''}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-800">
+                    ID: {req.id.slice(0, 8)}...
+                  </span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
@@ -145,7 +164,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </span>
                   <span>•</span>
                   <span>
-                    Budget: <strong className="text-zinc-200">${req.budget_range[0]?.toLocaleString()} - ${req.budget_range[1]?.toLocaleString()}</strong>
+                    Budget: <strong className="text-zinc-200 font-mono">₹{req.per_person_budget ? Number(req.per_person_budget).toLocaleString() : Number(req.budget_range[0]).toLocaleString()}</strong>
                   </span>
                   {req.created_at && (
                     <>
@@ -157,16 +176,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   )}
                 </div>
 
+                {/* Selected Inventory Badges */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {req.selected_hotels && req.selected_hotels.length > 0 && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/50">
+                      🏨 {req.selected_hotels.length} Hotel{req.selected_hotels.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {req.selected_places && req.selected_places.length > 0 && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/50">
+                      📍 {req.selected_places.length} Place{req.selected_places.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {req.selected_activities && req.selected_activities.length > 0 && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-purple-950/60 text-purple-300 border border-purple-800/50">
+                      ✨ {req.selected_activities.length} Activit{req.selected_activities.length > 1 ? 'ies' : 'y'}
+                    </span>
+                  )}
+                  {req.selected_transport && req.selected_transport.length > 0 && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/50">
+                      🚗 {req.selected_transport.length} Vehicle{req.selected_transport.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {(!req.selected_hotels?.length && !req.selected_places?.length && !req.selected_activities?.length && !req.selected_transport?.length) && (
+                    <span className="text-[10px] text-zinc-500 italic">
+                      Open Request (No pre-selected items)
+                    </span>
+                  )}
+                </div>
+
                 {req.user_preferences && (
-                  <p className="text-xs text-zinc-400 line-clamp-1 pt-1">
-                    "{req.user_preferences}"
+                  <p className="text-xs text-zinc-400 line-clamp-1">
+                    &ldquo;{req.user_preferences}&rdquo;
                   </p>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-center text-xs font-medium text-zinc-400 group-hover:text-white transition-colors">
-                <span>Open Canvas</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 group-hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Open in Studio</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
               </div>
             </div>
           ))}

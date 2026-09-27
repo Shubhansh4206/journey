@@ -12,6 +12,16 @@ import {
 } from '../lib/types';
 import { dbService } from '../lib/dbService';
 import { 
+  PRESET_HOTELS, 
+  PRESET_PLACES, 
+  PRESET_ACTIVITIES, 
+  PRESET_TRANSPORT,
+  PresetHotel,
+  PresetPlace,
+  PresetActivity,
+  PresetTransport
+} from '../lib/presets';
+import { 
   Building2, 
   Compass, 
   Car, 
@@ -30,7 +40,9 @@ import {
   CheckCircle2,
   DollarSign,
   Tag,
-  Search
+  Search,
+  Sparkles,
+  Layers
 } from 'lucide-react';
 
 interface TiedUpInventoryViewProps {
@@ -43,9 +55,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
-  const [showSqlGuide, setShowSqlGuide] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
 
   const [hotels, setHotels] = useState<OperatorHotel[]>([]);
   const [places, setPlaces] = useState<OperatorPlace[]>([]);
@@ -57,39 +68,47 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Hotel Form
-  const [hotelName, setHotelName] = useState('');
-  const [hotelCity, setHotelCity] = useState<SupportedCity>('Mumbai');
-  const [hotelAddress, setHotelAddress] = useState('');
-  const [hotelStar, setHotelStar] = useState(5);
-  const [hotelRate, setHotelRate] = useState(250);
-  const [hotelAmenities, setHotelAmenities] = useState('wifi, breakfast_included, pool');
-  const [hotelContact, setHotelContact] = useState('');
-  const [hotelPhone, setHotelPhone] = useState('');
+  const [hotelName, setHotelName] = useState(PRESET_HOTELS[0].name);
+  const [hotelCity, setHotelCity] = useState<SupportedCity>(PRESET_HOTELS[0].city as SupportedCity);
+  const [hotelAddress, setHotelAddress] = useState(PRESET_HOTELS[0].address);
+  const [hotelStar, setHotelStar] = useState(PRESET_HOTELS[0].star_rating);
+  const [hotelRate, setHotelRate] = useState(PRESET_HOTELS[0].contracted_rate_per_night);
+  const [hotelAmenities, setHotelAmenities] = useState(PRESET_HOTELS[0].amenities.join(', '));
+  const [hotelContact, setHotelContact] = useState(PRESET_HOTELS[0].contact_person);
+  const [hotelPhone, setHotelPhone] = useState(PRESET_HOTELS[0].contact_phone);
+  const [hotelLat, setHotelLat] = useState<number>(PRESET_HOTELS[0].latitude);
+  const [hotelLng, setHotelLng] = useState<number>(PRESET_HOTELS[0].longitude);
 
   // Place Form
-  const [placeName, setPlaceName] = useState('');
-  const [placeCity, setPlaceCity] = useState<SupportedCity>('Mumbai');
-  const [placeDesc, setPlaceDesc] = useState('');
-  const [placeFee, setPlaceFee] = useState(0);
-  const [placeDuration, setPlaceDuration] = useState(60);
-  const [placeTags, setPlaceTags] = useState('heritage, architecture, photography');
+  const [placeName, setPlaceName] = useState(PRESET_PLACES[0].name);
+  const [placeCity, setPlaceCity] = useState<SupportedCity>(PRESET_PLACES[0].city as SupportedCity);
+  const [placeDesc, setPlaceDesc] = useState(PRESET_PLACES[0].description);
+  const [placeFee, setPlaceFee] = useState(PRESET_PLACES[0].entry_fee_per_person);
+  const [placeDuration, setPlaceDuration] = useState(PRESET_PLACES[0].recommended_duration_minutes);
+  const [placeTags, setPlaceTags] = useState(PRESET_PLACES[0].tags.join(', '));
+  const [placeLat, setPlaceLat] = useState<number>(PRESET_PLACES[0].latitude);
+  const [placeLng, setPlaceLng] = useState<number>(PRESET_PLACES[0].longitude);
 
   // Activity Form
-  const [actTitle, setActTitle] = useState('');
-  const [actLocation, setActLocation] = useState('Mumbai');
-  const [actCost, setActCost] = useState(120);
-  const [actDuration, setActDuration] = useState(120);
-  const [actType, setActType] = useState('cultural');
-  const [actInclusions, setActInclusions] = useState('Guide, Entry Tickets');
+  const [actTitle, setActTitle] = useState(PRESET_ACTIVITIES[0].title);
+  const [actLocation, setActLocation] = useState(PRESET_ACTIVITIES[0].location);
+  const [actCost, setActCost] = useState(PRESET_ACTIVITIES[0].cost_per_person);
+  const [actDuration, setActDuration] = useState(PRESET_ACTIVITIES[0].duration_minutes);
+  const [actType, setActType] = useState(PRESET_ACTIVITIES[0].activity_type);
+  const [actInclusions, setActInclusions] = useState(PRESET_ACTIVITIES[0].inclusions.join(', '));
+  const [actLat, setActLat] = useState<number>(PRESET_ACTIVITIES[0].latitude);
+  const [actLng, setActLng] = useState<number>(PRESET_ACTIVITIES[0].longitude);
 
   // Transport Form
-  const [transVehicle, setTransVehicle] = useState('Innova Crysta Luxury');
-  const [transCapacity, setTransCapacity] = useState(6);
-  const [transCostDay, setTransCostDay] = useState(120);
-  const [transCostKm, setTransCostKm] = useState(1.5);
-  const [transVendor, setTransVendor] = useState('Fleet Partner');
-  const [transPhone, setTransPhone] = useState('');
-  const [transFeatures, setTransFeatures] = useState('AC, WiFi, Luggage Carrier');
+  const [transVehicle, setTransVehicle] = useState(PRESET_TRANSPORT[0].vehicle_type);
+  const [transCapacity, setTransCapacity] = useState(PRESET_TRANSPORT[0].capacity_passengers);
+  const [transCostDay, setTransCostDay] = useState(PRESET_TRANSPORT[0].cost_per_day);
+  const [transCostKm, setTransCostKm] = useState(PRESET_TRANSPORT[0].cost_per_km);
+  const [transVendor, setTransVendor] = useState(PRESET_TRANSPORT[0].vendor_company_name);
+  const [transPhone, setTransPhone] = useState(PRESET_TRANSPORT[0].contact_phone);
+  const [transFeatures, setTransFeatures] = useState(PRESET_TRANSPORT[0].features.join(', '));
+  const [transLat, setTransLat] = useState<number>(PRESET_TRANSPORT[0].latitude);
+  const [transLng, setTransLng] = useState<number>(PRESET_TRANSPORT[0].longitude);
 
   useEffect(() => {
     loadAllInventory();
@@ -127,43 +146,176 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
     }
   };
 
+  // --- PRESET SELECTION HANDLERS ---
+  const handleSelectPresetHotel = (name: string) => {
+    const p = PRESET_HOTELS.find(x => x.name === name);
+    if (!p) return;
+    setHotelName(p.name);
+    setHotelCity(p.city as SupportedCity);
+    setHotelAddress(p.address);
+    setHotelStar(p.star_rating);
+    setHotelRate(p.contracted_rate_per_night);
+    setHotelAmenities(p.amenities.join(', '));
+    setHotelContact(p.contact_person);
+    setHotelPhone(p.contact_phone);
+    setHotelLat(p.latitude);
+    setHotelLng(p.longitude);
+  };
+
+  const handleSelectPresetPlace = (name: string) => {
+    const p = PRESET_PLACES.find(x => x.name === name);
+    if (!p) return;
+    setPlaceName(p.name);
+    setPlaceCity(p.city as SupportedCity);
+    setPlaceDesc(p.description);
+    setPlaceFee(p.entry_fee_per_person);
+    setPlaceDuration(p.recommended_duration_minutes);
+    setPlaceTags(p.tags.join(', '));
+    setPlaceLat(p.latitude);
+    setPlaceLng(p.longitude);
+  };
+
+  const handleSelectPresetActivity = (title: string) => {
+    const p = PRESET_ACTIVITIES.find(x => x.title === title);
+    if (!p) return;
+    setActTitle(p.title);
+    setActLocation(p.location);
+    setActCost(p.cost_per_person);
+    setActDuration(p.duration_minutes);
+    setActType(p.activity_type);
+    setActInclusions(p.inclusions.join(', '));
+    setActLat(p.latitude);
+    setActLng(p.longitude);
+  };
+
+  const handleSelectPresetTransport = (vehicle: string) => {
+    const p = PRESET_TRANSPORT.find(x => x.vehicle_type === vehicle);
+    if (!p) return;
+    setTransVehicle(p.vehicle_type);
+    setTransCapacity(p.capacity_passengers);
+    setTransCostDay(p.cost_per_day);
+    setTransCostKm(p.cost_per_km);
+    setTransVendor(p.vendor_company_name);
+    setTransPhone(p.contact_phone);
+    setTransFeatures(p.features.join(', '));
+    setTransLat(p.latitude);
+    setTransLng(p.longitude);
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setIsFormOpen(false);
     setIsSaving(false);
-    const defaultCity: SupportedCity = selectedCity !== 'all' ? (selectedCity as SupportedCity) : 'Mumbai';
     
-    // Hotel
-    setHotelName('');
-    setHotelCity(defaultCity);
-    setHotelAddress('');
-    setHotelStar(5);
-    setHotelRate(250);
-    setHotelAmenities('wifi, breakfast_included, pool');
-    setHotelContact('');
-    setHotelPhone('');
-    // Place
-    setPlaceName('');
-    setPlaceCity(defaultCity);
-    setPlaceDesc('');
-    setPlaceFee(0);
-    setPlaceDuration(60);
-    setPlaceTags('heritage, architecture, photography');
-    // Activity
-    setActTitle('');
-    setActLocation(defaultCity);
-    setActCost(120);
-    setActDuration(120);
-    setActType('cultural');
-    setActInclusions('Guide, Entry Tickets');
-    // Transport
-    setTransVehicle('Innova Crysta Luxury');
-    setTransCapacity(6);
-    setTransCostDay(120);
-    setTransCostKm(1.5);
-    setTransVendor('');
-    setTransPhone('');
-    setTransFeatures('AC, WiFi, Luggage Carrier');
+    // Default to first preset in each category
+    handleSelectPresetHotel(PRESET_HOTELS[0].name);
+    handleSelectPresetPlace(PRESET_PLACES[0].name);
+    handleSelectPresetActivity(PRESET_ACTIVITIES[0].title);
+    handleSelectPresetTransport(PRESET_TRANSPORT[0].vehicle_type);
+  };
+
+  // --- 1-CLICK SYNC ALL HARDCODED PRESETS TO SUPABASE ---
+  const handleSyncAllPresets = async () => {
+    setIsSyncingAll(true);
+    try {
+      let addedCount = 0;
+      
+      // 1. Hotels
+      for (const ph of PRESET_HOTELS) {
+        const exists = hotels.some(h => h.name.toLowerCase() === ph.name.toLowerCase());
+        if (!exists) {
+          await dbService.addOperatorHotel({
+            operator_id: operator?.id,
+            name: ph.name,
+            city: ph.city as SupportedCity,
+            address: ph.address,
+            star_rating: ph.star_rating,
+            contracted_rate_per_night: ph.contracted_rate_per_night,
+            amenities: ph.amenities,
+            contact_person: ph.contact_person,
+            contact_phone: ph.contact_phone,
+            latitude: ph.latitude,
+            longitude: ph.longitude,
+            is_active: true
+          });
+          addedCount++;
+        }
+      }
+
+      // 2. Places
+      for (const pp of PRESET_PLACES) {
+        const exists = places.some(p => p.name.toLowerCase() === pp.name.toLowerCase());
+        if (!exists) {
+          await dbService.addOperatorPlace({
+            operator_id: operator?.id,
+            name: pp.name,
+            city: pp.city as SupportedCity,
+            description: pp.description,
+            entry_fee_per_person: pp.entry_fee_per_person,
+            recommended_duration_minutes: pp.recommended_duration_minutes,
+            tags: pp.tags,
+            latitude: pp.latitude,
+            longitude: pp.longitude,
+            is_active: true
+          });
+          addedCount++;
+        }
+      }
+
+      // 3. Activities
+      for (const pa of PRESET_ACTIVITIES) {
+        const exists = activities.some(a => a.title.toLowerCase() === pa.title.toLowerCase());
+        if (!exists) {
+          await dbService.addOperatorActivity({
+            operator_id: operator?.id,
+            title: pa.title,
+            location: pa.location,
+            cost_per_person: pa.cost_per_person,
+            duration_minutes: pa.duration_minutes,
+            activity_type: pa.activity_type,
+            inclusions: pa.inclusions,
+            latitude: pa.latitude,
+            longitude: pa.longitude,
+            is_active: true
+          });
+          addedCount++;
+        }
+      }
+
+      // 4. Transport
+      for (const pt of PRESET_TRANSPORT) {
+        const exists = transport.some(t => t.vehicle_type.toLowerCase() === pt.vehicle_type.toLowerCase());
+        if (!exists) {
+          await dbService.addOperatorTransport({
+            operator_id: operator?.id,
+            vehicle_type: pt.vehicle_type,
+            capacity_passengers: pt.capacity_passengers,
+            cost_per_day: pt.cost_per_day,
+            cost_per_km: pt.cost_per_km,
+            vendor_company_name: pt.vendor_company_name,
+            contact_phone: pt.contact_phone,
+            features: pt.features,
+            latitude: pt.latitude,
+            longitude: pt.longitude,
+            is_active: true
+          });
+          addedCount++;
+        }
+      }
+
+      await loadAllInventory();
+      setNotification({
+        type: 'success',
+        message: `Synced ${addedCount} curated options with geo-coordinates to Supabase!`
+      });
+    } catch (e: any) {
+      setNotification({
+        type: 'error',
+        message: `Sync failed: ${e.message}`
+      });
+    } finally {
+      setIsSyncingAll(false);
+    }
   };
 
   // --- CRUD: HOTELS ---
@@ -177,6 +329,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
     setHotelAmenities(h.amenities?.join(', ') || '');
     setHotelContact(h.contact_person || '');
     setHotelPhone(h.contact_phone || '');
+    setHotelLat(h.latitude || 18.921700);
+    setHotelLng(h.longitude || 72.833300);
     setIsFormOpen(true);
   };
 
@@ -193,6 +347,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       amenities: hotelAmenities.split(',').map(s => s.trim()).filter(Boolean),
       contact_person: hotelContact.trim(),
       contact_phone: hotelPhone.trim(),
+      latitude: hotelLat != null ? Number(hotelLat) : null,
+      longitude: hotelLng != null ? Number(hotelLng) : null,
       is_active: true,
     };
 
@@ -208,7 +364,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       if (res.error) {
         setNotification({ type: 'error', message: `Supabase Insert Warning: ${res.error}` });
       } else {
-        setNotification({ type: 'success', message: 'Hotel created in Supabase successfully.' });
+        setNotification({ type: 'success', message: 'Hotel created in Supabase successfully with Lat/Lng.' });
       }
     }
 
@@ -237,6 +393,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
     setPlaceFee(p.entry_fee_per_person);
     setPlaceDuration(p.recommended_duration_minutes || 60);
     setPlaceTags(p.tags?.join(', ') || '');
+    setPlaceLat(p.latitude || 18.922000);
+    setPlaceLng(p.longitude || 72.834700);
     setIsFormOpen(true);
   };
 
@@ -251,6 +409,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       entry_fee_per_person: Number(placeFee) || 0,
       recommended_duration_minutes: Number(placeDuration) || 60,
       tags: placeTags.split(',').map(s => s.trim()).filter(Boolean),
+      latitude: placeLat != null ? Number(placeLat) : null,
+      longitude: placeLng != null ? Number(placeLng) : null,
       is_active: true,
     };
 
@@ -266,7 +426,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       if (res.error) {
         setNotification({ type: 'error', message: `Supabase Insert Warning: ${res.error}` });
       } else {
-        setNotification({ type: 'success', message: 'Place created in Supabase successfully.' });
+        setNotification({ type: 'success', message: 'Place created in Supabase with Lat/Lng.' });
       }
     }
 
@@ -295,6 +455,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
     setActDuration(a.duration_minutes);
     setActType(a.activity_type || 'cultural');
     setActInclusions(a.inclusions?.join(', ') || '');
+    setActLat(a.latitude || 19.166800);
+    setActLng(a.longitude || 72.852600);
     setIsFormOpen(true);
   };
 
@@ -309,6 +471,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       duration_minutes: Number(actDuration) || 120,
       activity_type: actType,
       inclusions: actInclusions.split(',').map(s => s.trim()).filter(Boolean),
+      latitude: actLat != null ? Number(actLat) : null,
+      longitude: actLng != null ? Number(actLng) : null,
       is_active: true,
     };
 
@@ -324,7 +488,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       if (res.error) {
         setNotification({ type: 'error', message: `Supabase Insert Warning: ${res.error}` });
       } else {
-        setNotification({ type: 'success', message: 'Activity created in Supabase successfully.' });
+        setNotification({ type: 'success', message: 'Activity created in Supabase with Lat/Lng.' });
       }
     }
 
@@ -354,6 +518,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
     setTransVendor(t.vendor_company_name || '');
     setTransPhone(t.contact_phone || '');
     setTransFeatures(t.features?.join(', ') || '');
+    setTransLat(t.latitude || 19.089600);
+    setTransLng(t.longitude || 72.865600);
     setIsFormOpen(true);
   };
 
@@ -369,6 +535,8 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       vendor_company_name: transVendor.trim(),
       contact_phone: transPhone.trim(),
       features: transFeatures.split(',').map(s => s.trim()).filter(Boolean),
+      latitude: transLat != null ? Number(transLat) : null,
+      longitude: transLng != null ? Number(transLng) : null,
       is_active: true,
     };
 
@@ -384,7 +552,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
       if (res.error) {
         setNotification({ type: 'error', message: `Supabase Insert Warning: ${res.error}` });
       } else {
-        setNotification({ type: 'success', message: 'Transport vehicle created in Supabase successfully.' });
+        setNotification({ type: 'success', message: 'Transport vehicle created in Supabase with Lat/Lng.' });
       }
     }
 
@@ -457,16 +625,26 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
             <span>Tied-Up Partner Inventory</span>
-            <span className="text-[11px] font-mono text-zinc-300 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
-              Supabase CRUD
+            <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60">
+              Geo-Coordinates Enabled
             </span>
           </h1>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Manage your contracted hotels, sightseeing landmarks, activities, and transport fleet.
+            Manage your contracted hotels, sightseeing landmarks, activities, and transport fleet with verified latitude/longitude coordinates.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncAllPresets}
+            disabled={isSyncingAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-900/60 hover:bg-indigo-800/80 border border-indigo-700/60 rounded-lg text-xs text-indigo-200 font-medium transition-all shadow-sm disabled:opacity-50"
+            title="Auto-insert all curated hotels, places, activities, and transport to Supabase"
+          >
+            <Sparkles className={`w-3.5 h-3.5 text-indigo-300 ${isSyncingAll ? 'animate-spin' : ''}`} />
+            <span>{isSyncingAll ? 'Syncing...' : '1-Click Sync Presets'}</span>
+          </button>
+
           <button
             onClick={loadAllInventory}
             disabled={isLoading}
@@ -590,12 +768,84 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                {editingId ? 'Edit' : 'Add'} {activeTab === 'hotels' ? 'Contracted Hotel' : activeTab === 'places' ? 'Sightseeing Place' : activeTab === 'activities' ? 'Activity / Tour' : 'Vehicle Fleet'}
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <span>{editingId ? 'Edit' : 'Add'} {activeTab === 'hotels' ? 'Contracted Hotel' : activeTab === 'places' ? 'Sightseeing Place' : activeTab === 'activities' ? 'Activity / Tour' : 'Vehicle Fleet'}</span>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                  Supabase DB
+                </span>
               </h3>
               <button onClick={resetForm} className="text-zinc-500 hover:text-white">
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* CURATED PRESET DROPDOWN (ONLY SHOW THESE OPTIONS) */}
+            <div className="bg-indigo-950/40 border border-indigo-500/40 rounded-xl p-3.5 mb-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>⚡ Select Curated Option</span>
+                </div>
+                <span className="text-[10px] font-mono text-indigo-400 bg-indigo-900/40 px-2 py-0.5 rounded">
+                  Hardcoded Presets
+                </span>
+              </div>
+              
+              {activeTab === 'hotels' && (
+                <select
+                  value={hotelName}
+                  onChange={(e) => handleSelectPresetHotel(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-zinc-950 border border-indigo-700/60 rounded text-xs text-white focus:outline-none focus:border-indigo-400 font-medium"
+                >
+                  {PRESET_HOTELS.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name} ({p.city}) — ${p.contracted_rate_per_night}/nt [Lat: {p.latitude}, Lng: {p.longitude}]
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {activeTab === 'places' && (
+                <select
+                  value={placeName}
+                  onChange={(e) => handleSelectPresetPlace(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-zinc-950 border border-indigo-700/60 rounded text-xs text-white focus:outline-none focus:border-indigo-400 font-medium"
+                >
+                  {PRESET_PLACES.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name} ({p.city}) — ${p.entry_fee_per_person} fee [Lat: {p.latitude}, Lng: {p.longitude}]
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {activeTab === 'activities' && (
+                <select
+                  value={actTitle}
+                  onChange={(e) => handleSelectPresetActivity(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-zinc-950 border border-indigo-700/60 rounded text-xs text-white focus:outline-none focus:border-indigo-400 font-medium"
+                >
+                  {PRESET_ACTIVITIES.map((p) => (
+                    <option key={p.title} value={p.title}>
+                      {p.title} ({p.location}) — ${p.cost_per_person}/pax [Lat: {p.latitude}, Lng: {p.longitude}]
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {activeTab === 'transport' && (
+                <select
+                  value={transVehicle}
+                  onChange={(e) => handleSelectPresetTransport(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-zinc-950 border border-indigo-700/60 rounded text-xs text-white focus:outline-none focus:border-indigo-400 font-medium"
+                >
+                  {PRESET_TRANSPORT.map((p) => (
+                    <option key={p.vehicle_type} value={p.vehicle_type}>
+                      {p.vehicle_type} — ${p.cost_per_day}/day [Lat: {p.latitude}, Lng: {p.longitude}]
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* HOTELS FORM */}
@@ -626,6 +876,38 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                         </option>
                       ))}
                     </select>
+                  </div>
+                </div>
+
+                {/* Geo Coordinates Inputs */}
+                <div className="grid grid-cols-2 gap-3 bg-zinc-950/60 p-2.5 rounded-lg border border-emerald-900/40">
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Latitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={hotelLat ?? ''}
+                      onChange={(e) => setHotelLat(parseFloat(e.target.value) || 0)}
+                      placeholder="18.921700"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Longitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={hotelLng ?? ''}
+                      onChange={(e) => setHotelLng(parseFloat(e.target.value) || 0)}
+                      placeholder="72.833300"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
                 </div>
 
@@ -710,7 +992,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                     className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded disabled:opacity-50"
                   >
                     {isSaving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    <span>{editingId ? 'Update in Supabase' : 'Save Hotel'}</span>
+                    <span>{editingId ? 'Update in Supabase' : 'Save Hotel to Supabase'}</span>
                   </button>
                 </div>
               </form>
@@ -744,6 +1026,38 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                         </option>
                       ))}
                     </select>
+                  </div>
+                </div>
+
+                {/* Geo Coordinates Inputs */}
+                <div className="grid grid-cols-2 gap-3 bg-zinc-950/60 p-2.5 rounded-lg border border-emerald-900/40">
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Latitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={placeLat ?? ''}
+                      onChange={(e) => setPlaceLat(parseFloat(e.target.value) || 0)}
+                      placeholder="18.922000"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Longitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={placeLng ?? ''}
+                      onChange={(e) => setPlaceLng(parseFloat(e.target.value) || 0)}
+                      placeholder="72.834700"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
                 </div>
 
@@ -804,7 +1118,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                     className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded disabled:opacity-50"
                   >
                     {isSaving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    <span>{editingId ? 'Update in Supabase' : 'Save Place'}</span>
+                    <span>{editingId ? 'Update in Supabase' : 'Save Place to Supabase'}</span>
                   </button>
                 </div>
               </form>
@@ -820,7 +1134,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       type="text"
                       value={actTitle}
                       onChange={(e) => setActTitle(e.target.value)}
-                      placeholder="e.g. Sunset Boat Cruise on Lake Pichola"
+                      placeholder="e.g. Bollywood Studio & Film City Guided Tour"
                       required
                       className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
                     />
@@ -838,6 +1152,38 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                         </option>
                       ))}
                     </select>
+                  </div>
+                </div>
+
+                {/* Geo Coordinates Inputs */}
+                <div className="grid grid-cols-2 gap-3 bg-zinc-950/60 p-2.5 rounded-lg border border-emerald-900/40">
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Latitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={actLat ?? ''}
+                      onChange={(e) => setActLat(parseFloat(e.target.value) || 0)}
+                      placeholder="19.166800"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Longitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={actLng ?? ''}
+                      onChange={(e) => setActLng(parseFloat(e.target.value) || 0)}
+                      placeholder="72.852600"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
                 </div>
 
@@ -886,7 +1232,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                     type="text"
                     value={actInclusions}
                     onChange={(e) => setActInclusions(e.target.value)}
-                    placeholder="Private Boat, Champagne, Certified Historian Guide"
+                    placeholder="Round-trip Boat Ferry, UNESCO Entry Tickets, Certified Guide"
                     className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
                   />
                 </div>
@@ -901,7 +1247,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                     className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded disabled:opacity-50"
                   >
                     {isSaving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    <span>{editingId ? 'Update in Supabase' : 'Save Activity'}</span>
+                    <span>{editingId ? 'Update in Supabase' : 'Save Activity to Supabase'}</span>
                   </button>
                 </div>
               </form>
@@ -917,7 +1263,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       type="text"
                       value={transVehicle}
                       onChange={(e) => setTransVehicle(e.target.value)}
-                      placeholder="e.g. Toyota Innova Crysta / BMW 5-Series"
+                      placeholder="e.g. Toyota Innova Crysta Chauffeur SUV"
                       required
                       className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
                     />
@@ -932,6 +1278,38 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       onChange={(e) => setTransCapacity(parseInt(e.target.value) || 4)}
                       required
                       className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Geo Coordinates Inputs */}
+                <div className="grid grid-cols-2 gap-3 bg-zinc-950/60 p-2.5 rounded-lg border border-emerald-900/40">
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Latitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={transLat ?? ''}
+                      onChange={(e) => setTransLat(parseFloat(e.target.value) || 0)}
+                      placeholder="19.089600"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-emerald-400 mb-1 flex items-center gap-1 font-semibold">
+                      <MapPin className="w-3 h-3 text-emerald-400" /> Longitude (6 Decimals) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={transLng ?? ''}
+                      onChange={(e) => setTransLng(parseFloat(e.target.value) || 0)}
+                      placeholder="72.865600"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                 </div>
@@ -968,7 +1346,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       type="text"
                       value={transVendor}
                       onChange={(e) => setTransVendor(e.target.value)}
-                      placeholder="e.g. Royal Rajasthan Chauffeurs"
+                      placeholder="e.g. Royal Chauffeur Fleet Mumbai"
                       className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
                     />
                   </div>
@@ -978,7 +1356,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       type="text"
                       value={transPhone}
                       onChange={(e) => setTransPhone(e.target.value)}
-                      placeholder="+91 294 242 1234"
+                      placeholder="+91 22 4000 1234"
                       className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
                     />
                   </div>
@@ -990,7 +1368,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                     type="text"
                     value={transFeatures}
                     onChange={(e) => setTransFeatures(e.target.value)}
-                    placeholder="AC, WiFi, Chauffeur Uniform, Luggage Carrier"
+                    placeholder="AC, WiFi, Uniformed Chauffeur, Luggage Carrier"
                     className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
                   />
                 </div>
@@ -1005,7 +1383,7 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                     className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded disabled:opacity-50"
                   >
                     {isSaving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    <span>{editingId ? 'Update in Supabase' : 'Save Vehicle'}</span>
+                    <span>{editingId ? 'Update in Supabase' : 'Save Vehicle to Supabase'}</span>
                   </button>
                 </div>
               </form>
@@ -1014,18 +1392,18 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
         </div>
       )}
 
-      {/* ITEMS LIST (READ / UPDATE / DELETE) */}
+      {/* ITEMS LIST (READ / UPDATE / DELETE WITH GEO BADGES) */}
       <div className="space-y-2.5">
         {/* HOTELS */}
         {activeTab === 'hotels' && (
           filteredHotels.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-500 border border-zinc-800/80 rounded-xl bg-zinc-900/20">
-              No hotels found {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click "+ Add Hotel" to insert into Supabase.
+              No hotels found {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click &quot;+ Add Hotel&quot; or &quot;1-Click Sync Presets&quot; to insert into Supabase.
             </div>
           ) : (
             filteredHotels.map((h) => (
-              <div key={h.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4">
-                <div className="space-y-1">
+              <div key={h.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4 transition-colors hover:border-zinc-700">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-xs text-white">{h.name}</h3>
                     <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">
@@ -1035,12 +1413,26 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       ${h.contracted_rate_per_night}/night
                     </span>
                   </div>
+                  
                   <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
                     <span className="text-zinc-300 font-medium">{h.city}</span>
                     {h.address ? `• ${h.address}` : ''} 
                     {h.contact_phone ? `• ${h.contact_phone}` : ''}
                   </p>
-                  <div className="flex flex-wrap gap-1">
+
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {/* Geo Coordinates Badge */}
+                    {h.latitude != null && h.longitude != null ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-medium">
+                        <MapPin className="w-2.5 h-2.5 text-emerald-400" />
+                        Lat: {Number(h.latitude).toFixed(6)} | Lng: {Number(h.longitude).toFixed(6)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        No Geo-Coordinates
+                      </span>
+                    )}
+
                     {h.amenities?.map((am, i) => (
                       <span key={i} className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-950 text-zinc-400 border border-zinc-800">
                         {am}
@@ -1075,12 +1467,12 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
         {activeTab === 'places' && (
           filteredPlaces.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-500 border border-zinc-800/80 rounded-xl bg-zinc-900/20">
-              No sightseeing spots found {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click "+ Add Place" to insert into Supabase.
+              No sightseeing spots found {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click &quot;+ Add Place&quot; or &quot;1-Click Sync Presets&quot; to insert into Supabase.
             </div>
           ) : (
             filteredPlaces.map((p) => (
-              <div key={p.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4">
-                <div className="space-y-1">
+              <div key={p.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4 transition-colors hover:border-zinc-700">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-xs text-white">{p.name}</h3>
                     <span className="text-[10px] text-zinc-300 font-medium">({p.city})</span>
@@ -1089,7 +1481,28 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                     </span>
                     <span className="text-[10px] text-zinc-500">• {p.recommended_duration_minutes}m</span>
                   </div>
+
                   {p.description && <p className="text-[11px] text-zinc-400 line-clamp-1">{p.description}</p>}
+
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {/* Geo Coordinates Badge */}
+                    {p.latitude != null && p.longitude != null ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-medium">
+                        <MapPin className="w-2.5 h-2.5 text-emerald-400" />
+                        Lat: {Number(p.latitude).toFixed(6)} | Lng: {Number(p.longitude).toFixed(6)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        No Geo-Coordinates
+                      </span>
+                    )}
+
+                    {p.tags?.map((t, i) => (
+                      <span key={i} className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-950 text-zinc-400 border border-zinc-800">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -1117,12 +1530,12 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
         {activeTab === 'activities' && (
           filteredActivities.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-500 border border-zinc-800/80 rounded-xl bg-zinc-900/20">
-              No experiences found {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click "+ Add Activity" to insert into Supabase.
+              No experiences found {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click &quot;+ Add Activity&quot; or &quot;1-Click Sync Presets&quot; to insert into Supabase.
             </div>
           ) : (
             filteredActivities.map((a) => (
-              <div key={a.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4">
-                <div className="space-y-1">
+              <div key={a.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4 transition-colors hover:border-zinc-700">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-xs text-white">{a.title}</h3>
                     <span className="text-xs font-mono font-medium text-zinc-200">
@@ -1133,7 +1546,22 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       {a.activity_type}
                     </span>
                   </div>
+
                   <p className="text-[11px] text-zinc-400">{a.location} • Inclusions: {a.inclusions?.join(', ')}</p>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {/* Geo Coordinates Badge */}
+                    {a.latitude != null && a.longitude != null ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-medium">
+                        <MapPin className="w-2.5 h-2.5 text-emerald-400" />
+                        Lat: {Number(a.latitude).toFixed(6)} | Lng: {Number(a.longitude).toFixed(6)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        No Geo-Coordinates
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -1161,12 +1589,12 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
         {activeTab === 'transport' && (
           filteredTransport.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-500 border border-zinc-800/80 rounded-xl bg-zinc-900/20">
-              No vehicle fleet found. Click "+ Add Vehicle" to insert into Supabase.
+              No vehicle fleet found. Click &quot;+ Add Vehicle&quot; or &quot;1-Click Sync Presets&quot; to insert into Supabase.
             </div>
           ) : (
             filteredTransport.map((t) => (
-              <div key={t.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4">
-                <div className="space-y-1">
+              <div key={t.id} className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between gap-4 transition-colors hover:border-zinc-700">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-xs text-white">{t.vehicle_type}</h3>
                     <span className="text-[10px] text-zinc-400">({t.capacity_passengers} Pax)</span>
@@ -1174,10 +1602,25 @@ export const TiedUpInventoryView: React.FC<TiedUpInventoryViewProps> = ({ operat
                       ${t.cost_per_day}/day • ${t.cost_per_km}/km
                     </span>
                   </div>
+
                   <p className="text-[11px] text-zinc-400">
                     {t.vendor_company_name ? `${t.vendor_company_name} • ` : ''}
                     Features: {t.features?.join(', ')}
                   </p>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {/* Geo Coordinates Badge */}
+                    {t.latitude != null && t.longitude != null ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-medium">
+                        <MapPin className="w-2.5 h-2.5 text-emerald-400" />
+                        Lat: {Number(t.latitude).toFixed(6)} | Lng: {Number(t.longitude).toFixed(6)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        No Geo-Coordinates
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">

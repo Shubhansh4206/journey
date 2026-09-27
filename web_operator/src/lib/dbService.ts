@@ -250,44 +250,120 @@ export const dbService = {
 
   // --- TRIP REQUESTS ---
   async getTripRequests(operatorId?: string): Promise<TripRequest[]> {
+    // 1. Try our Next.js API server route first (guaranteed data access)
     try {
-      let query = supabase.from('trip_requests').select('*');
-      
-      let resolvedOpId = operatorId;
-      if (!resolvedOpId || !isValidUUID(resolvedOpId)) {
-        const active = getLocal<TourOperator | null>(STORAGE_KEYS.ACTIVE_OPERATOR, null);
-        resolvedOpId = active?.id;
+      if (typeof window !== 'undefined') {
+        const res = await fetch('/api/trip-requests');
+        if (res.ok) {
+          const list: TripRequest[] = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            setLocal(STORAGE_KEYS.REQUESTS, list);
+            return list;
+          }
+        }
       }
+    } catch (e) {
+      console.warn('API /api/trip-requests fetch warning, trying direct Supabase', e);
+    }
 
-      // Operators see: Open marketplace pool (unclaimed) OR their own claimed requests
-      if (resolvedOpId && isValidUUID(resolvedOpId)) {
-        query = query.or(`operator_id.eq.${resolvedOpId},operator_id.is.null`);
-      }
+    // 2. Direct Supabase fallback
+    try {
+      const { data, error } = await supabase
+        .from('trip_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      if (!error && data && data.length > 0) {
+        const formatted: TripRequest[] = data.map((d: any) => {
+          const perPersonBudget = d.per_person_budget || 0;
+          const budgetRange = Array.isArray(d.budget_range) && d.budget_range.length >= 2
+            ? d.budget_range
+            : [perPersonBudget || 3000, perPersonBudget ? perPersonBudget * 1.5 : 6000];
 
-      if (!error && data) {
-        const formatted: TripRequest[] = data.map((d: any) => ({
-          id: d.id,
-          customer_id: d.customer_id,
-          operator_id: d.operator_id,
-          status: d.status || 'pending',
-          destination: d.destination,
-          travel_dates: typeof d.travel_dates === 'string' ? d.travel_dates : JSON.stringify(d.travel_dates),
-          budget_range: Array.isArray(d.budget_range) ? d.budget_range : [3000, 6000],
-          user_preferences: d.user_preferences,
-          created_at: d.created_at,
-          customer_name: d.customer_name || 'Verified Traveler',
-          customer_email: d.customer_email || 'traveler@journey.io'
-        }));
+          const travelDates = d.start_date && d.end_date
+            ? `${d.start_date} → ${d.end_date}`
+            : (typeof d.travel_dates === 'string' ? d.travel_dates : 'Flexible 2026');
+
+          return {
+            id: d.id,
+            customer_id: d.customer_id,
+            operator_id: d.operator_id,
+            group_id: d.group_id,
+            status: d.status || 'pending',
+            destination: d.destination || 'Unspecified Destination',
+            trip_mode: d.trip_mode,
+            assigned_group_name: d.assigned_group_name,
+            start_date: d.start_date,
+            end_date: d.end_date,
+            travel_dates: travelDates,
+            per_person_budget: perPersonBudget,
+            budget_range: budgetRange,
+            user_preferences: d.user_preferences,
+            selected_hotels: d.selected_hotels || [],
+            selected_places: d.selected_places || [],
+            selected_activities: d.selected_activities || [],
+            selected_transport: d.selected_transport || [],
+            estimated_mock_total: d.estimated_mock_total,
+            created_at: d.created_at,
+            customer_name: d.assigned_group_name ? `${d.trip_mode || 'Group'}: ${d.assigned_group_name}` : (d.customer_name || 'Verified Traveler'),
+            customer_email: d.customer_email || 'traveler@journey.io'
+          };
+        });
+
         setLocal(STORAGE_KEYS.REQUESTS, formatted);
         return formatted;
       }
     } catch (e) {
-      console.warn('Error fetching trip_requests from Supabase', e);
+      console.warn('Error fetching trip_requests directly from Supabase', e);
     }
 
     return getLocal<TripRequest[]>(STORAGE_KEYS.REQUESTS, []);
+  },
+
+  async getTripRequestById(id: string): Promise<{ trip: TripRequest | null; hydrated_items: any } | null> {
+    try {
+      if (typeof window !== 'undefined') {
+        const res = await fetch(`/api/trip-requests?id=${encodeURIComponent(id)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.trip_request) {
+            return {
+              trip: json.trip_request as TripRequest,
+              hydrated_items: json.hydrated_items || { hotels: [], places: [], activities: [], transport: [] }
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch trip request via API:', e);
+    }
+
+    // Direct Supabase lookup fallback
+    try {
+      const { data: trip } = await supabase.from('trip_requests').select('*').eq('id', id).maybeSingle();
+      if (trip) {
+        const perPersonBudget = trip.per_person_budget || 0;
+        const formattedTrip: TripRequest = {
+          ...trip,
+          travel_dates: trip.start_date && trip.end_date ? `${trip.start_date} → ${trip.end_date}` : (trip.travel_dates || 'Flexible 2026'),
+          budget_range: Array.isArray(trip.budget_range) ? trip.budget_range : [perPersonBudget || 3000, perPersonBudget ? perPersonBudget * 1.5 : 6000],
+          selected_hotels: trip.selected_hotels || [],
+          selected_places: trip.selected_places || [],
+          selected_activities: trip.selected_activities || [],
+          selected_transport: trip.selected_transport || [],
+        };
+        return {
+          trip: formattedTrip,
+          hydrated_items: { hotels: [], places: [], activities: [], transport: [] }
+        };
+      }
+    } catch (e) {
+      console.warn('Supabase getTripRequestById error:', e);
+    }
+
+    const localList = getLocal<TripRequest[]>(STORAGE_KEYS.REQUESTS, []);
+    const found = localList.find(r => r.id === id);
+    return found ? { trip: found, hydrated_items: { hotels: [], places: [], activities: [], transport: [] } } : null;
   },
 
   async createTripRequest(req: Partial<TripRequest>): Promise<TripRequest | null> {
@@ -851,6 +927,8 @@ export const dbService = {
       amenities: hotel.amenities || ['wifi', 'breakfast_included'],
       contact_person: hotel.contact_person || null,
       contact_phone: hotel.contact_phone || null,
+      latitude: hotel.latitude !== undefined ? hotel.latitude : null,
+      longitude: hotel.longitude !== undefined ? hotel.longitude : null,
       is_active: true
     };
 
@@ -906,6 +984,8 @@ export const dbService = {
       amenities: hotel.amenities,
       contact_person: hotel.contact_person,
       contact_phone: hotel.contact_phone,
+      latitude: hotel.latitude !== undefined ? hotel.latitude : null,
+      longitude: hotel.longitude !== undefined ? hotel.longitude : null,
       updated_at: new Date().toISOString()
     };
 
@@ -996,6 +1076,8 @@ export const dbService = {
       entry_fee_per_person: Number(place.entry_fee_per_person) || 0,
       recommended_duration_minutes: Number(place.recommended_duration_minutes) || 60,
       tags: place.tags || ['heritage', 'sightseeing'],
+      latitude: place.latitude !== undefined ? place.latitude : null,
+      longitude: place.longitude !== undefined ? place.longitude : null,
       is_active: true
     };
 
@@ -1049,6 +1131,8 @@ export const dbService = {
       entry_fee_per_person: Number(place.entry_fee_per_person) || 0,
       recommended_duration_minutes: Number(place.recommended_duration_minutes) || 60,
       tags: place.tags,
+      latitude: place.latitude !== undefined ? place.latitude : null,
+      longitude: place.longitude !== undefined ? place.longitude : null,
     };
 
     const current = getLocal<OperatorPlace[]>(STORAGE_KEYS.PLACES, []);
@@ -1139,6 +1223,8 @@ export const dbService = {
       activity_type: activity.activity_type || 'cultural',
       inclusions: activity.inclusions || ['Guide', 'Entry Tickets'],
       restrictions: activity.restrictions || {},
+      latitude: activity.latitude !== undefined ? activity.latitude : null,
+      longitude: activity.longitude !== undefined ? activity.longitude : null,
       is_active: true
     };
 
@@ -1193,6 +1279,8 @@ export const dbService = {
       activity_type: activity.activity_type,
       inclusions: activity.inclusions,
       restrictions: activity.restrictions,
+      latitude: activity.latitude !== undefined ? activity.latitude : null,
+      longitude: activity.longitude !== undefined ? activity.longitude : null,
       updated_at: new Date().toISOString()
     };
 
@@ -1284,6 +1372,8 @@ export const dbService = {
       vendor_company_name: transport.vendor_company_name || 'Fleet Partner',
       contact_phone: transport.contact_phone || '',
       features: transport.features || ['AC', 'WiFi', 'Luggage Carrier'],
+      latitude: transport.latitude !== undefined ? transport.latitude : null,
+      longitude: transport.longitude !== undefined ? transport.longitude : null,
       is_active: true
     };
 
@@ -1351,6 +1441,8 @@ export const dbService = {
       vendor_company_name: transport.vendor_company_name,
       contact_phone: transport.contact_phone,
       features: transport.features,
+      latitude: transport.latitude !== undefined ? transport.latitude : null,
+      longitude: transport.longitude !== undefined ? transport.longitude : null,
       updated_at: new Date().toISOString()
     };
 
