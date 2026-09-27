@@ -3,7 +3,7 @@ class QuotationModel {
   final String tripRequestId;
   final String? operatorId;
   final String title;
-  final String status; // 'pending_operator', 'operator_proposed', 'user_countered', 'accepted', 'declined', 'draft'
+  final String status; // 'draft', 'sent', 'countered', 'finalised', 'rejected', 'accepted'
   final String currency;
   final double totalBaseCost;
   final double totalMarginAmount;
@@ -21,12 +21,12 @@ class QuotationModel {
     required this.tripRequestId,
     this.operatorId,
     this.title = 'Your Customized Itinerary',
-    this.status = 'pending_operator',
+    this.status = 'sent',
     this.currency = 'INR',
     this.totalBaseCost = 0.0,
     this.totalMarginAmount = 0.0,
     required this.totalFinalPrice,
-    this.paxCount = 4,
+    this.paxCount = 1,
     double? perPersonPrice,
     this.customerNotes,
     this.operatorNotes,
@@ -37,24 +37,34 @@ class QuotationModel {
             (paxCount > 0 ? (totalFinalPrice / paxCount) : totalFinalPrice);
 
   /// Status Checkers
-  bool get isLocked =>
+  bool get isDraft => status == 'draft';
+
+  bool get isSent =>
+      status == 'sent' ||
       status == 'pending_operator' ||
-      status == 'user_countered' ||
-      status == 'draft' ||
-      status == 'sent';
+      status == 'operator_proposed';
+  bool get isOperatorProposed => isSent;
 
-  bool get isOperatorProposed =>
-      status == 'operator_proposed' || status == 'user_modified';
+  bool get isCountered =>
+      status == 'countered' || status == 'user_countered';
+  bool get isUserCountered => isCountered;
 
-  bool get isAccepted => status == 'accepted' || status == 'confirmed';
+  bool get isFinalised =>
+      status == 'finalised' || status == 'accepted' || status == 'confirmed';
+  bool get isAccepted => isFinalised;
+  bool get isBooked => isFinalised;
 
-  bool get isDeclined => status == 'declined' || status == 'cancelled';
+  bool get isRejected => status == 'rejected' || status == 'declined';
+  bool get isDeclined => isRejected;
+
+  bool get isActionable => !isFinalised && !isDeclined;
+  bool get isLocked => isDraft || isFinalised || isDeclined;
 
   factory QuotationModel.fromJson(Map<String, dynamic> json) {
     final total = (json['total_final_price'] as num?)?.toDouble() ??
         (json['base_price_per_pax'] as num?)?.toDouble() ??
         0.0;
-    final pax = (json['pax_count'] as num?)?.toInt() ?? 4;
+    final pax = (json['pax_count'] as num?)?.toInt() ?? 1;
     final ppp = (json['per_person_price'] as num?)?.toDouble() ??
         (pax > 0 ? (total / pax) : total);
 
@@ -63,7 +73,7 @@ class QuotationModel {
       tripRequestId: json['trip_request_id']?.toString() ?? '',
       operatorId: json['operator_id']?.toString(),
       title: json['title']?.toString() ?? 'Customized Itinerary',
-      status: json['status']?.toString().toLowerCase() ?? 'pending_operator',
+      status: json['status']?.toString().toLowerCase() ?? 'draft',
       currency: json['currency']?.toString() ?? 'INR',
       totalBaseCost: (json['total_base_cost'] as num?)?.toDouble() ?? 0.0,
       totalMarginAmount: (json['total_margin_amount'] as num?)?.toDouble() ?? 0.0,
@@ -95,7 +105,6 @@ class QuotationModel {
       'total_base_cost': totalBaseCost,
       'total_final_price': totalFinalPrice,
       'pax_count': paxCount,
-      'per_person_price': perPersonPrice,
       'customer_notes': customerNotes,
       'operator_notes': operatorNotes,
       'valid_until': validUntil?.toIso8601String(),

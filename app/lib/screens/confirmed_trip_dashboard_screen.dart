@@ -22,6 +22,47 @@ class _ConfirmedTripDashboardScreenState
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
+  // Guide assignment state (Operator / Squad lead can assign)
+  Map<String, dynamic> _assignedGuide = {
+    'name': 'Rajesh Kumar',
+    'role': 'Certified Local Lead Guide',
+    'rating': '4.9 ★ (120+ Trips)',
+    'phone': '+91 98234 11092',
+    'avatar':
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    'specialization': 'Goan Coastal & Water Expeditions',
+  };
+
+  final List<Map<String, dynamic>> _availableGuides = [
+    {
+      'name': 'Rajesh Kumar',
+      'role': 'Certified Local Lead Guide',
+      'rating': '4.9 ★ (120+ Trips)',
+      'phone': '+91 98234 11092',
+      'avatar':
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      'specialization': 'Goan Coastal & Water Expeditions',
+    },
+    {
+      'name': 'Anita Sharma',
+      'role': 'Adventure & Scuba Specialist',
+      'rating': '4.8 ★ (95 Trips)',
+      'phone': '+91 98192 44320',
+      'avatar':
+          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+      'specialization': 'PADI Certified Dive Master & Trek Lead',
+    },
+    {
+      'name': 'Vikram Deshmukh',
+      'role': 'Heritage & Cultural Storyteller',
+      'rating': '5.0 ★ (150+ Trips)',
+      'phone': '+91 97654 88123',
+      'avatar':
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+      'specialization': 'Old Goa Architecture & Cuisine Explorer',
+    },
+  ];
+
   // Chat messages with Guide presence clearly indicated
   final List<Map<String, dynamic>> _chatMessages = [
     {
@@ -477,6 +518,15 @@ class _ConfirmedTripDashboardScreenState
             color: const Color(0xFF0F172A),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_pin_circle_rounded,
+                color: Color(0xFF2563EB)),
+            tooltip: 'Assign / Change Guide (Operator)',
+            onPressed: _showAssignGuideModal,
+          ),
+          const SizedBox(width: 4),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: false,
@@ -744,6 +794,201 @@ class _ConfirmedTripDashboardScreenState
     );
   }
 
+  // ── Operator Guide Assignment Modal ──────────────────────────────────────
+  void _showAssignGuideModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.badge_rounded,
+                            color: Color(0xFF2563EB), size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Assign Tour Guide',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkCharcoal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Operator Console',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Assign a certified local expert to manage transfers, activities & live assistance.',
+                style: GoogleFonts.poppins(
+                  fontSize: 11.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._availableGuides.map((guide) {
+                final isAssigned = _assignedGuide['name'] == guide['name'];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: isAssigned
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isAssigned
+                          ? const Color(0xFF2563EB)
+                          : const Color(0xFFE2E8F0),
+                      width: isAssigned ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
+                    leading: CircleAvatar(
+                      radius: 24,
+                      backgroundImage: NetworkImage(guide['avatar'] as String),
+                    ),
+                    title: Row(
+                      children: [
+                        Text(
+                          guide['name'] as String,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13.5,
+                            color: AppColors.darkCharcoal,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.verified_rounded,
+                            size: 14, color: Color(0xFF2563EB)),
+                      ],
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${guide['role']} • ${guide['rating']}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF2563EB),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          guide['specialization'] as String,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: ElevatedButton(
+                      onPressed: isAssigned
+                          ? null
+                          : () {
+                              setState(() {
+                                _assignedGuide = guide;
+                                _chatMessages.add({
+                                  'sender': guide['name'],
+                                  'role': 'Local Guide',
+                                  'isGuide': true,
+                                  'time': 'Just now',
+                                  'message':
+                                      'Namaste squad! I am ${guide['name']}, your assigned local guide. Let me know if you need anything!',
+                                  'avatar': guide['avatar'],
+                                });
+                              });
+                              Navigator.pop(modalCtx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '🎉 Assigned ${guide['name']} as trip guide for squad & operator!',
+                                    style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                  backgroundColor: const Color(0xFF2563EB),
+                                ),
+                              );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isAssigned
+                            ? const Color(0xFF059669)
+                            : AppColors.primaryDarkBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        isAssigned ? 'Assigned ✓' : 'Assign',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // ── Component 2 & 3: Chronological Feed (Timeline) & Activity Vouchers ─────
   Widget _buildTimelineTab() {
     final filtered = _selectedDayFilter == 0
@@ -754,6 +999,83 @@ class _ConfirmedTripDashboardScreenState
 
     return Column(
       children: [
+        // Assigned Tour Guide Banner
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundImage:
+                    NetworkImage(_assignedGuide['avatar'] as String),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          _assignedGuide['name'] as String,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkCharcoal,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified_rounded,
+                            size: 13, color: Color(0xFF2563EB)),
+                      ],
+                    ),
+                    Text(
+                      '${_assignedGuide['role']} • ${_assignedGuide['phone']}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              OutlinedButton(
+                onPressed: _showAssignGuideModal,
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  visualDensity: VisualDensity.compact,
+                  side: const BorderSide(color: Color(0xFF2563EB)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Change',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Day filter chips
         Container(
           color: Colors.white,

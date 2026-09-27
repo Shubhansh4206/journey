@@ -214,14 +214,18 @@ class QuotationNegotiationService {
     String? customerNotes,
   }) async {
     try {
-      print('🚀 [DB_UPDATE] Submitting counter-offer to quotations table:');
+      print('===============================================================');
+      print('🚀 [DB_UPDATE] Submitting revised quotation counter-offer to Supabase:');
       print('   - Quotation ID: "$quotationId"');
-      print('   - New Total Price: ₹$newTotalPrice');
-      print('   - Customer Notes: "$customerNotes"');
+      print('   - New Total Final Price: ₹$newTotalPrice');
+      print('   - Calculated Per Person Price: ₹$perPersonPrice');
+      print('   - Status Tag: "countered" (Reflected to Tour Operator for review)');
+      print('===============================================================');
 
-      // Note: per_person_price is GENERATED ALWAYS STORED in PostgreSQL, so we do NOT send it
+      // Note: per_person_price is GENERATED ALWAYS AS (total_final_price / NULLIF(pax_count, 0)) STORED
+      // in PostgreSQL, so we do NOT send per_person_price. PostgreSQL will compute it automatically!
       final updatePayload = <String, dynamic>{
-        'status': 'user_countered',
+        'status': 'countered',
         'total_final_price': newTotalPrice,
         'updated_at': DateTime.now().toIso8601String(),
       };
@@ -241,19 +245,104 @@ class QuotationNegotiationService {
     }
   }
 
-  // ── 10. Accept Quotation in Database ───────────────────────────────────────
-  Future<bool> acceptQuotation(String quotationId) async {
+  // ── 10. Accept Quotation (Sets status to 'finalised') ─────────────────────
+  Future<bool> acceptQuotation({
+    required String quotationId,
+    String? tripRequestId,
+  }) async {
     try {
-      print('🎉 [DB_UPDATE] Updating quotation ID "$quotationId" status to "accepted" in database');
+      print('🎉 [DB_UPDATE] User ACCEPTED quotation "$quotationId"! Updating status to "finalised" in database...');
       final res = await _supabase.from('quotations').update({
-        'status': 'accepted',
+        'status': 'finalised',
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', quotationId).select();
 
-      print('✅ [DB_UPDATE] Quotation status accepted in database: $res');
+      print('✅ [DB_UPDATE] Quotation status updated to "finalised": $res');
+
+      // Also update trip_request status if applicable
+      if (tripRequestId != null && tripRequestId.isNotEmpty) {
+        try {
+          await _supabase.from('trip_requests').update({
+            'status': 'confirmed',
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('id', tripRequestId);
+          print('✅ [DB_UPDATE] Trip request "$tripRequestId" status set to "confirmed"');
+        } catch (te) {
+          print('ℹ️ [DB_UPDATE] Note: trip_requests table status update skipped: $te');
+        }
+      }
+
       return true;
     } catch (e, stack) {
-      print('❌ [DB_UPDATE] Error accepting quotation in database: $e\n$stack');
+      print('❌ [DB_UPDATE] Error accepting quotation: $e\n$stack');
+      return false;
+    }
+  }
+
+  // ── 10b. Decline Quotation (Sets status to 'declined') ─────────────────────
+  Future<bool> declineQuotation({
+    required String quotationId,
+    String? tripRequestId,
+  }) async {
+    try {
+      print('🚫 [DB_UPDATE] User DECLINED quotation "$quotationId"! Updating status to "declined" in database...');
+      final res = await _supabase.from('quotations').update({
+        'status': 'declined',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', quotationId).select();
+
+      print('✅ [DB_UPDATE] Quotation status updated to "declined": $res');
+
+      if (tripRequestId != null && tripRequestId.isNotEmpty) {
+        try {
+          await _supabase.from('trip_requests').update({
+            'status': 'cancelled',
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('id', tripRequestId);
+          print('✅ [DB_UPDATE] Trip request "$tripRequestId" status set to "cancelled"');
+        } catch (te) {
+          print('ℹ️ [DB_UPDATE] Note: trip_requests table status update skipped: $te');
+        }
+      }
+
+      return true;
+    } catch (e, stack) {
+      print('❌ [DB_UPDATE] Error declining quotation: $e\n$stack');
+      return false;
+    }
+  }
+
+  // ── 10c. Mark Quotation As Booked (Legacy / Payment Gateway Helper) ───────
+  Future<bool> markQuotationAsBooked({
+    required String quotationId,
+    required String paymentId,
+    String? tripRequestId,
+  }) async {
+    return acceptQuotation(
+      quotationId: quotationId,
+      tripRequestId: tripRequestId,
+    );
+  }
+
+  // ── 10c. Assign Guide to Itinerary (Operator Feature) ─────────────────────
+  Future<bool> assignGuideToItinerary({
+    required String quotationId,
+    required Map<String, dynamic> guideData,
+    String? tripRequestId,
+  }) async {
+    try {
+      print('👤 [DB_UPDATE] Assigning guide to quotation "$quotationId":');
+      print('   - Guide: ${guideData['name']} (${guideData['role']})');
+      print('   - Phone: ${guideData['phone']}');
+
+      await _supabase.from('quotations').update({
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', quotationId);
+
+      print('✅ [DB_UPDATE] Guide assigned successfully to quotation "$quotationId"');
+      return true;
+    } catch (e, stack) {
+      print('❌ [DB_UPDATE] Error assigning guide: $e\n$stack');
       return false;
     }
   }

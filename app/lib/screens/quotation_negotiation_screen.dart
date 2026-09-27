@@ -7,6 +7,7 @@ import '../services/quotation_negotiation_service.dart';
 import '../utils/colors.dart';
 import '../widgets/negotiate_price_sheet.dart';
 import 'confirmed_trip_dashboard_screen.dart';
+import 'quotation_payment_screen.dart';
 
 class QuotationNegotiationScreen extends StatefulWidget {
   final String? tripRequestId;
@@ -231,33 +232,219 @@ class _QuotationNegotiationScreenState
     }
   }
 
-  // ── Accept Deal Action ────────────────────────────────────────────────────
+  // ── Accept Quotation Action -> Updates status to 'finalised' ──────────────
   Future<void> _handleAcceptQuote() async {
     if (_quotation == null) return;
-    print('🎉 [UI_ACCEPT] User accepting quotation ID: "${_quotation!.id}"');
+    print('🎉 [UI_ACCEPT] User accepted quotation ID: "${_quotation!.id}"');
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFECFDF5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF059669), size: 24),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Accept Quotation',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: AppColors.nearBlack,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to accept this itinerary proposal of ₹${_quotation!.totalFinalPrice.toStringAsFixed(0)} (₹${_quotation!.perPersonPrice.toStringAsFixed(0)} / person)? This will finalize your journey booking.',
+          style: GoogleFonts.poppins(
+            fontSize: 13.5,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Confirm & Accept',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
 
     setState(() {
-      _quotation = _quotation!.copyWith(status: 'accepted');
+      _quotation = _quotation!.copyWith(status: 'finalised');
     });
 
-    await _negotiationService.acceptQuotation(_quotation!.id);
+    final success = await _negotiationService.acceptQuotation(
+      quotationId: _quotation!.id,
+      tripRequestId: _quotation!.tripRequestId,
+    );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '🎉 Trip quotation accepted! Welcome aboard.',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '🎉 Quotation accepted! Status is now finalised.',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFF059669),
           ),
-          backgroundColor: const Color(0xFF10B981),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to update quotation status. Please check your connection.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    }
+  }
+
+  // ── Decline Quotation Action -> Updates status to 'declined' ──────────────
+  Future<void> _handleDeclineQuote() async {
+    if (_quotation == null) return;
+    print('🚫 [UI_DECLINE] User initiated decline for quotation ID: "${_quotation!.id}"');
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEF2F2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cancel_rounded,
+                  color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Decline Quotation',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: AppColors.nearBlack,
+              ),
+            ),
+          ],
         ),
-      );
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const ConfirmedTripDashboardScreen(),
+        content: Text(
+          'Are you sure you want to decline this itinerary quote? This will update the status to declined.',
+          style: GoogleFonts.poppins(
+            fontSize: 13.5,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
         ),
-      );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: Text(
+              'Keep Reviewing',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Yes, Decline',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() {
+      _quotation = _quotation!.copyWith(status: 'declined');
+    });
+
+    final success = await _negotiationService.declineQuotation(
+      quotationId: _quotation!.id,
+      tripRequestId: _quotation!.tripRequestId,
+    );
+
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Quotation declined.',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFF475569),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to update quotation status. Please check your connection.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     }
   }
 
@@ -389,33 +576,46 @@ class _QuotationNegotiationScreenState
     String statusTitle;
     String statusSub;
 
-    if (isAccepted) {
+    if (quote.isFinalised) {
       bg = const Color(0xFFECFDF5);
       border = const Color(0xFFA7F3D0);
       iconColor = const Color(0xFF059669);
       icon = Icons.verified_rounded;
-      statusTitle = 'Deal Finalized & Accepted';
+      statusTitle = 'Deal Finalised & Booked';
       statusSub =
-          'All squad terms locked. Proceed to vouchers & payment vault.';
-    } else if (isProposed) {
+          'All squad terms locked and verified. Proceed to vouchers & dashboard.';
+    } else if (quote.isRejected) {
+      bg = const Color(0xFFFEF2F2);
+      border = const Color(0xFFFECACA);
+      iconColor = const Color(0xFFDC2626);
+      icon = Icons.cancel_rounded;
+      statusTitle = 'Quotation Rejected';
+      statusSub = 'This quotation offer was declined or rejected.';
+    } else if (quote.isSent) {
       bg = const Color(0xFFEFF6FF);
       border = const Color(0xFFBFDBFE);
       iconColor = const Color(0xFF2563EB);
       icon = Icons.local_offer_rounded;
-      statusTitle = 'Operator Offer Ready for Review';
+      statusTitle = 'Quotation Ready for Review';
       statusSub =
-          'Drag activities to adjust schedule or counter-offer up to 7% off.';
-    } else {
-      // isLocked / pending_operator / user_countered
+          'Review the customized itinerary activities, schedule, and pricing.';
+    } else if (quote.isCountered) {
       bg = const Color(0xFFFFFBEB);
       border = const Color(0xFFFDE68A);
       iconColor = const Color(0xFFD97706);
-      icon = Icons.lock_clock_rounded;
-      statusTitle = quote.status == 'user_countered'
-          ? 'Counter-Offer Submitted · Waiting for Operator'
-          : 'Operator Calculating Final Costs';
+      icon = Icons.hourglass_top_rounded;
+      statusTitle = 'Countered · In Operator Review';
       statusSub =
-          'Canvas is currently locked in read-only mode while local operator reviews costs.';
+          'Counter bid submitted. Canvas is locked in read-only mode while operator reviews.';
+    } else {
+      // draft
+      bg = const Color(0xFFF8FAFC);
+      border = const Color(0xFFE2E8F0);
+      iconColor = const Color(0xFF64748B);
+      icon = Icons.edit_note_rounded;
+      statusTitle = 'Draft Quotation';
+      statusSub =
+          'Tour operator is structuring costs and activities for this itinerary.';
     }
 
     return Container(
@@ -1305,8 +1505,8 @@ class _QuotationNegotiationScreenState
 
   // ── 3. Floating Bottom Action Bar ─────────────────────────────────────────
   Widget _buildBottomActionBar(QuotationModel quote) {
-    final isProposed = quote.isOperatorProposed;
-    final isAccepted = quote.isAccepted;
+    final isFinalised = quote.isFinalised;
+    final isDeclined = quote.isDeclined;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
@@ -1378,7 +1578,7 @@ class _QuotationNegotiationScreenState
             ),
 
             // Action Buttons
-            if (isAccepted)
+            if (isFinalised)
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
@@ -1407,23 +1607,42 @@ class _QuotationNegotiationScreenState
                   ),
                 ),
               )
-            else if (isProposed)
+            else if (isDeclined)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cancel_rounded,
+                        size: 16, color: Color(0xFFDC2626)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Quotation Declined',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Review & Negotiate (Phase 3 Trigger)
+                  // Decline Button
                   OutlinedButton(
-                    onPressed: () {
-                      NegotiatePriceSheet.show(
-                        context: context,
-                        quotation: quote,
-                        onSubmit: _handleCounterOffer,
-                      );
-                    },
+                    onPressed: _handleDeclineQuote,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryDarkBlue,
+                      foregroundColor: const Color(0xFFDC2626),
                       side: const BorderSide(
-                          color: AppColors.primaryDarkBlue, width: 1.2),
+                          color: Color(0xFFFCA5A5), width: 1.2),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -1431,64 +1650,41 @@ class _QuotationNegotiationScreenState
                       ),
                     ),
                     child: Text(
-                      'Review & Negotiate',
+                      'Decline',
                       style: GoogleFonts.poppins(
                         fontSize: 12.5,
                         fontWeight: FontWeight.bold,
+                        color: const Color(0xFFDC2626),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
 
-                  // Accept Offer
-                  ElevatedButton(
+                  // Accept Button
+                  ElevatedButton.icon(
                     onPressed: _handleAcceptQuote,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryDarkBlue,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(32),
-                      ),
-                    ),
-                    child: Text(
-                      'Accept Deal',
+                    icon: const Icon(Icons.check_circle_outline_rounded,
+                        size: 16, color: Colors.white),
+                    label: Text(
+                      'Accept',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                  ),
-                ],
-              )
-            else
-              // Locked indicator
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.softGrey,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.hourglass_top_rounded,
-                        size: 14, color: Color(0xFFD97706)),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Waiting for Operator',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.nearBlack,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
           ],
         ),

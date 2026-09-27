@@ -327,6 +327,8 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
   }
 
 
+  String _quotationStatusFilter = 'all'; // 'all', 'sent', 'countered', 'finalised', 'draft'
+
   // ── Received Operator Quotations Section (Live Ping-Pong) ─────────────────
   Widget _buildReceivedQuotationsSection() {
     if (_isLoadingQuotes) {
@@ -365,6 +367,30 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
       return const SizedBox.shrink();
     }
 
+    final allCount = _receivedQuotations.length;
+    final sentCount = _receivedQuotations.where((i) {
+      final q = i['quotation'] as QuotationModel;
+      return q.isSent;
+    }).length;
+    final counterCount = _receivedQuotations.where((i) {
+      final q = i['quotation'] as QuotationModel;
+      return q.isCountered;
+    }).length;
+    final finalisedCount = _receivedQuotations.where((i) {
+      final q = i['quotation'] as QuotationModel;
+      return q.isFinalised;
+    }).length;
+
+    // Filter displayed quotations
+    final filteredQuotations = _receivedQuotations.where((i) {
+      final q = i['quotation'] as QuotationModel;
+      if (_quotationStatusFilter == 'sent') return q.isSent;
+      if (_quotationStatusFilter == 'countered') return q.isCountered;
+      if (_quotationStatusFilter == 'finalised') return q.isFinalised;
+      if (_quotationStatusFilter == 'draft') return q.isDraft;
+      return true;
+    }).toList();
+
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 4, 20, 14),
       child: Column(
@@ -402,7 +428,7 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${_receivedQuotations.length} Active',
+                      '$allCount Active',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -435,20 +461,119 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 185,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: _receivedQuotations.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final item = _receivedQuotations[index];
-                return _buildQuotationCard(item);
-              },
+
+          // ── Status Segregation Tabs ───────────────────────────────────────
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                _buildStatusFilterChip('all', 'All ($allCount)', Icons.dashboard_rounded),
+                const SizedBox(width: 6),
+                _buildStatusFilterChip(
+                  'sent',
+                  'Sent ($sentCount)',
+                  Icons.local_offer_rounded,
+                  activeColor: const Color(0xFF2563EB),
+                ),
+                const SizedBox(width: 6),
+                _buildStatusFilterChip(
+                  'countered',
+                  'Countered ($counterCount)',
+                  Icons.hourglass_top_rounded,
+                  activeColor: const Color(0xFFD97706),
+                ),
+                const SizedBox(width: 6),
+                _buildStatusFilterChip(
+                  'finalised',
+                  'Finalised ($finalisedCount)',
+                  Icons.verified_rounded,
+                  activeColor: const Color(0xFF059669),
+                ),
+              ],
             ),
           ),
+
+          const SizedBox(height: 12),
+
+          if (filteredQuotations.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Center(
+                child: Text(
+                  'No quotations matching "$_quotationStatusFilter" status.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 195,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: filteredQuotations.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final item = filteredQuotations[index];
+                  return _buildQuotationCard(item);
+                },
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusFilterChip(
+    String key,
+    String label,
+    IconData icon, {
+    Color activeColor = AppColors.primaryDarkBlue,
+  }) {
+    final isSelected = _quotationStatusFilter == key;
+    return InkWell(
+      onTap: () => setState(() => _quotationStatusFilter = key),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.12) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.4 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: isSelected ? activeColor : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? activeColor : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -463,26 +588,32 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
     String statusLabel;
     IconData statusIcon;
 
-    if (quote.isAccepted) {
+    if (quote.isFinalised) {
       statusBg = const Color(0xFFECFDF5);
       statusColor = const Color(0xFF059669);
-      statusLabel = 'Accepted & Final';
-      statusIcon = Icons.verified_rounded;
-    } else if (quote.isOperatorProposed) {
-      statusBg = const Color(0xFFEFF6FF);
-      statusColor = const Color(0xFF2563EB);
-      statusLabel = 'Offer Ready';
-      statusIcon = Icons.local_offer_rounded;
-    } else if (quote.status == 'user_countered') {
+      statusLabel = 'Finalised';
+      statusIcon = Icons.check_circle_rounded;
+    } else if (quote.isCountered) {
       statusBg = const Color(0xFFFFFBEB);
       statusColor = const Color(0xFFD97706);
-      statusLabel = 'Counter Sent';
+      statusLabel = 'Countered';
       statusIcon = Icons.hourglass_top_rounded;
+    } else if (quote.isSent) {
+      statusBg = const Color(0xFFEFF6FF);
+      statusColor = const Color(0xFF2563EB);
+      statusLabel = 'Sent';
+      statusIcon = Icons.local_offer_rounded;
+    } else if (quote.isRejected) {
+      statusBg = const Color(0xFFFEF2F2);
+      statusColor = const Color(0xFFDC2626);
+      statusLabel = 'Rejected';
+      statusIcon = Icons.cancel_rounded;
     } else {
+      // draft
       statusBg = const Color(0xFFF1F5F9);
       statusColor = const Color(0xFF64748B);
-      statusLabel = quote.status.toUpperCase();
-      statusIcon = Icons.receipt_long_rounded;
+      statusLabel = 'Draft';
+      statusIcon = Icons.edit_note_rounded;
     }
 
     return GestureDetector(
