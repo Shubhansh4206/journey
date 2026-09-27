@@ -17,6 +17,7 @@ import '../screens/pending_invites_screen.dart';
 import '../screens/create_group_screen.dart';
 import '../screens/group_detail_screen.dart';
 import '../screens/itinerary_cart_screen.dart';
+import '../screens/quotation_negotiation_screen.dart';
 import '../services/profile_service.dart';
 import '../services/travel_mode_service.dart';
 
@@ -93,6 +94,33 @@ final GoRouter appRouter = GoRouter(
         return ItineraryCartScreen(
           city: city,
           isSolo: isSolo,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/negotiation/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        final tripRequestId = state.uri.queryParameters['tripRequestId'] ?? id;
+        final destination = state.uri.queryParameters['destination'];
+        return QuotationNegotiationScreen(
+          tripRequestId: tripRequestId,
+          quotationId: id,
+          destination: destination,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/negotiation',
+      builder: (context, state) {
+        final tripRequestId = state.uri.queryParameters['tripRequestId'] ??
+            state.uri.queryParameters['id'];
+        final destination = state.uri.queryParameters['destination'];
+        final quotationId = state.uri.queryParameters['id'] ?? '';
+        return QuotationNegotiationScreen(
+          tripRequestId: tripRequestId,
+          quotationId: quotationId,
+          destination: destination,
         );
       },
     ),

@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/group_controller.dart';
 import '../models/group_models.dart';
+import '../models/quotation_model.dart';
 import '../models/trip_request.dart';
 import '../screens/confirmed_trip_dashboard_screen.dart';
 import '../screens/group_picker_sheet.dart';
+import '../services/quotation_negotiation_service.dart';
 import '../utils/colors.dart';
 import '../widgets/swiggy_group_roster_sheet.dart';
 
@@ -22,10 +24,29 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
       ? Get.find<GroupController>()
       : Get.put(GroupController());
 
+  List<Map<String, dynamic>> _receivedQuotations = [];
+  bool _isLoadingQuotes = false;
+
   @override
   void initState() {
     super.initState();
+    _refreshAllData();
+  }
+
+  Future<void> _refreshAllData() async {
     _groupController.refreshAll();
+    _fetchReceivedQuotations();
+  }
+
+  Future<void> _fetchReceivedQuotations() async {
+    setState(() => _isLoadingQuotes = true);
+    final quotes = await QuotationNegotiationService().getUserReceivedQuotations();
+    if (mounted) {
+      setState(() {
+        _receivedQuotations = quotes;
+        _isLoadingQuotes = false;
+      });
+    }
   }
 
   String _formatDateShort(DateTime dt) {
@@ -93,9 +114,7 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
       ),
       body: RefreshIndicator(
         color: const Color(0xFFFC8019),
-        onRefresh: () async {
-          await _groupController.refreshAll();
-        },
+        onRefresh: _refreshAllData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
@@ -106,6 +125,9 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
             children: [
               // ── Confirmed Groups Summary Card (Phase 2) ───────────────────
               _buildConfirmedGroupsSummaryCard(),
+
+              // ── Received Operator Quotations Section (Live Ping-Pong) ────
+              _buildReceivedQuotationsSection(),
 
               // ── Sent Trip Requests Section (Realtime Live Tracking) ────────
               _buildSentTripRequestsSection(),
@@ -304,6 +326,328 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
     );
   }
 
+
+  // ── Received Operator Quotations Section (Live Ping-Pong) ─────────────────
+  Widget _buildReceivedQuotationsSection() {
+    if (_isLoadingQuotes) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primaryDarkBlue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Checking for operator quotations in database...',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_receivedQuotations.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.local_offer_rounded,
+                        color: Color(0xFF2563EB), size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Received Quotations',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkCharcoal,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${_receivedQuotations.length} Active',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: _fetchReceivedQuotations,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.refresh_rounded,
+                        size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Sync',
+                      style: GoogleFonts.poppins(
+                          fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 185,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _receivedQuotations.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final item = _receivedQuotations[index];
+                return _buildQuotationCard(item);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotationCard(Map<String, dynamic> item) {
+    final quote = item['quotation'] as QuotationModel;
+    final tripInfo = item['trip_request'] as Map<String, dynamic>? ?? {};
+    final destination = tripInfo['destination']?.toString() ?? 'Custom Journey';
+
+    Color statusBg;
+    Color statusColor;
+    String statusLabel;
+    IconData statusIcon;
+
+    if (quote.isAccepted) {
+      statusBg = const Color(0xFFECFDF5);
+      statusColor = const Color(0xFF059669);
+      statusLabel = 'Accepted & Final';
+      statusIcon = Icons.verified_rounded;
+    } else if (quote.isOperatorProposed) {
+      statusBg = const Color(0xFFEFF6FF);
+      statusColor = const Color(0xFF2563EB);
+      statusLabel = 'Offer Ready';
+      statusIcon = Icons.local_offer_rounded;
+    } else if (quote.status == 'user_countered') {
+      statusBg = const Color(0xFFFFFBEB);
+      statusColor = const Color(0xFFD97706);
+      statusLabel = 'Counter Sent';
+      statusIcon = Icons.hourglass_top_rounded;
+    } else {
+      statusBg = const Color(0xFFF1F5F9);
+      statusColor = const Color(0xFF64748B);
+      statusLabel = quote.status.toUpperCase();
+      statusIcon = Icons.receipt_long_rounded;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        context.push(
+          '/negotiation?tripRequestId=${quote.tripRequestId}&id=${quote.id}&destination=${Uri.encodeComponent(destination)}',
+        );
+      },
+      child: Container(
+        width: 270,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: quote.isOperatorProposed
+                ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+                : Colors.grey.shade200,
+            width: quote.isOperatorProposed ? 1.5 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Row 1: Destination + Status Badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    quote.title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkCharcoal,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(statusIcon, size: 10, color: statusColor),
+                      const SizedBox(width: 3),
+                      Text(
+                        statusLabel,
+                        style: GoogleFonts.poppins(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // Row 2: Pax count & Trip info
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${quote.paxCount} Pax Squad',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryDarkBlue,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    destination,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+
+            // Row 3: Price breakdown
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '₹${quote.perPersonPrice.toStringAsFixed(0)}/pax',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryDarkBlue,
+                      ),
+                    ),
+                    Text(
+                      'Total: ₹${quote.totalFinalPrice.toStringAsFixed(0)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryDarkBlue,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Review',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      const Icon(Icons.arrow_forward_ios_rounded,
+                          size: 9, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ── Sent Trip Requests Section (Realtime Live Tracking) ───────────────────
   Widget _buildSentTripRequestsSection() {
@@ -749,7 +1093,37 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
                 const SizedBox(height: 24),
 
                 // Actions
-                if (req.status != 'cancelled')
+                if (req.status != 'cancelled') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        context.push(
+                          '/negotiation?tripRequestId=${req.id}&destination=${Uri.encodeComponent(req.destination)}',
+                        );
+                      },
+                      icon: const Icon(Icons.handshake_rounded,
+                          size: 18, color: Colors.white),
+                      label: Text(
+                        'Live Quotation & Negotiation',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.5,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryDarkBlue,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
                     height: 46,
@@ -808,6 +1182,7 @@ class _GroupsNavScreenState extends State<GroupsNavScreen> {
                               fontWeight: FontWeight.bold)),
                     ),
                   ),
+                ],
               ],
             ),
           ),
