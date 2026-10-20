@@ -122,26 +122,31 @@ export const AgenticAiDrawer: React.FC<AgenticAiDrawerProps> = ({
   ];
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[440px] bg-[#121215] border-l border-zinc-800 shadow-2xl flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-zinc-800 flex items-center justify-center text-zinc-300">
-            <Sparkles className="w-3.5 h-3.5" />
+    <>
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 z-40 backdrop-blur-overlay bg-black/60 transition-opacity" 
+      />
+      <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[440px] bg-[#121215] border-l border-zinc-800 shadow-2xl flex flex-col spring-drawer animate-in slide-in-from-right duration-300">
+        {/* Header */}
+        <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-zinc-800 flex items-center justify-center text-zinc-300">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            </div>
+            <div>
+              <h2 className="text-xs font-bold text-white">AI Itinerary Copilot</h2>
+              <p className="text-[10px] text-zinc-500">Autonomous planning and margin calculations.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xs font-bold text-white">AI Itinerary Copilot</h2>
-            <p className="text-[10px] text-zinc-500">Autonomous planning and margin calculations.</p>
-          </div>
-        </div>
 
-        <button
-          onClick={onClose}
-          className="p-1 rounded text-zinc-500 hover:text-white"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+          <button
+            onClick={onClose}
+            className="btn-interactive p-1 rounded text-zinc-500 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
@@ -237,12 +242,13 @@ export const AgenticAiDrawer: React.FC<AgenticAiDrawerProps> = ({
           <button
             type="submit"
             disabled={isProcessing || !prompt.trim()}
-            className="p-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 disabled:opacity-50 transition-colors"
+            className="btn-interactive p-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 disabled:opacity-50 transition-colors"
           >
             {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
           </button>
         </form>
       </div>
     </div>
+    </>
   );
 };

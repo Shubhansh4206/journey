@@ -83,12 +83,12 @@ export const GuideAssignmentModal: React.FC<GuideAssignmentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-overlay">
+      <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-zinc-400" />
+            <UserCheck className="w-4 h-4 text-cyan-400" />
             <div>
               <h2 className="text-xs font-bold text-white">Tour Guide Dispatch</h2>
               <p className="text-[10px] text-zinc-400">Assign a licensed guide to this finalized itinerary.</p>
@@ -97,7 +97,7 @@ export const GuideAssignmentModal: React.FC<GuideAssignmentModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1 rounded text-zinc-400 hover:text-white"
+            className="btn-interactive p-1 rounded text-zinc-400 hover:text-white"
           >
             <X className="w-4 h-4" />
           </button>
@@ -138,7 +138,7 @@ export const GuideAssignmentModal: React.FC<GuideAssignmentModalProps> = ({
                         <Phone className="w-2.5 h-2.5" /> {guide.contact_number}
                       </p>
                       <div className="flex justify-between text-[10px] text-zinc-500 pt-1 border-t border-zinc-800/80">
-                        <span>{guide.languages.join(', ')}</span>
+                        <span>{guide.languages?.join(', ') || 'English'}</span>
                         <span className="font-mono text-zinc-300">${guide.daily_rate}/day</span>
                       </div>
                     </div>

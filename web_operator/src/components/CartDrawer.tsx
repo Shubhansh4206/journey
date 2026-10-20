@@ -187,25 +187,30 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const totalInventoryCount = hotels.length + places.length + activities.length + transport.length;
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-slate-950/95 border-l border-slate-800 shadow-2xl backdrop-blur-2xl flex flex-col">
-      {/* Drawer Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-bold text-white flex items-center gap-2">
-            <span>Add Inventory to Itinerary Canvas</span>
-          </h2>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            Drop your contracted hotels, activities, and fleet onto the canvas.
-          </p>
-        </div>
+    <>
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 z-40 backdrop-blur-overlay bg-black/60 transition-opacity" 
+      />
+      <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-slate-950/95 border-l border-slate-800 shadow-2xl backdrop-blur-2xl flex flex-col spring-drawer animate-in slide-in-from-right duration-300">
+        {/* Drawer Header */}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>Add Inventory to Itinerary Canvas</span>
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Drop your contracted hotels, activities, and fleet onto the canvas.
+            </p>
+          </div>
 
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
+          <button
+            onClick={onClose}
+            className="btn-interactive p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
       {/* Tabs */}
       <div className="flex border-b border-slate-800 px-4 bg-slate-900/60 text-xs">
@@ -430,12 +435,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
           <button
             type="submit"
-            className="w-full py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl mt-3"
+            className="btn-interactive w-full py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl mt-3"
           >
             Add Node to Canvas
           </button>
         </form>
       )}
     </div>
+    </>
   );
 };

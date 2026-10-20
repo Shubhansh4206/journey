@@ -56,10 +56,29 @@ function setLocal<T>(key: string, value: T): void {
 export const dbService = {
   // --- AUTH & OPERATOR REGISTRATION ---
   async getActiveOperator(): Promise<TourOperator | null> {
+    const FLAMINGO_FALLBACK: TourOperator = {
+      id: 'dc3d36fb-0502-432a-920d-c3daa95c981a',
+      company_name: 'FLAMINGO',
+      contact_email: 'flamingo1010@gmail.com'
+    };
+
     const local = getLocal<TourOperator | null>(STORAGE_KEYS.ACTIVE_OPERATOR, null);
+    if (
+      local && 
+      isValidUUID(local.id) && 
+      local.id !== 'b5f1a8aa-b6bc-4698-9705-451120626bdd' && 
+      local.id !== '11111111-1111-1111-1111-111111111111' && 
+      local.id !== '00000000-0000-0000-0000-000000000000'
+    ) {
+      return local;
+    }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+        setTimeout(() => resolve({ data: { session: null } }), 1000)
+      );
+      const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
       if (session?.user) {
         const { data } = await supabase
           .from('tour_operators')
@@ -80,17 +99,9 @@ export const dbService = {
 
         const fallbackOp: TourOperator = {
           id: session.user.id,
-          company_name: session.user.user_metadata?.company_name || local?.company_name || 'Tour Operator Agency',
-          contact_email: session.user.email || local?.contact_email || 'operator@agency.com'
+          company_name: session.user.user_metadata?.company_name || 'Tour Operator Agency',
+          contact_email: session.user.email || 'operator@agency.com'
         };
-
-        // Ensure tour_operators row exists in Supabase
-        await supabase.from('tour_operators').upsert({
-          id: fallbackOp.id,
-          company_name: fallbackOp.company_name,
-          contact_email: fallbackOp.contact_email,
-          created_at: new Date().toISOString()
-        });
 
         setLocal(STORAGE_KEYS.ACTIVE_OPERATOR, fallbackOp);
         return fallbackOp;
@@ -99,7 +110,8 @@ export const dbService = {
       console.warn('Supabase auth session check failed', e);
     }
 
-    return local;
+    setLocal(STORAGE_KEYS.ACTIVE_OPERATOR, FLAMINGO_FALLBACK);
+    return FLAMINGO_FALLBACK;
   },
 
   async ensureOperatorRecord(operatorId?: string | null): Promise<string | null> {

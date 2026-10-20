@@ -66,25 +66,25 @@ export const AuthLogin: React.FC<AuthLoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#09090b]">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#F5F6F8]">
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 mb-2.5 text-zinc-300">
-            <Compass className="w-4 h-4" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#0A2647] mb-3 text-white shadow-md shadow-[#0A2647]/20">
+            <Compass className="w-6 h-6" />
           </div>
-          <h1 className="text-lg font-semibold tracking-tight text-white">
+          <h1 className="text-xl font-bold tracking-tight text-[#1A1A1A]">
             Tour Operator Portal
           </h1>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {mode === 'signin' ? 'Sign in to access your dashboard' : 'Create your operator account'}
+          <p className="text-xs text-[#9AA0A6] mt-1">
+            {mode === 'signin' ? 'Sign in to access your dashboard' : 'Create your verified operator account'}
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-[#121215] border border-zinc-800 rounded-xl p-5 shadow-lg">
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_10px_35px_rgba(0,0,0,0.05)]">
           {/* Mode Switcher */}
-          <div className="grid grid-cols-2 p-1 bg-zinc-950 rounded-lg mb-4 border border-zinc-800/80">
+          <div className="grid grid-cols-2 p-1 bg-[#F5F6F8] rounded-full mb-5 border border-slate-200/80">
             <button
               type="button"
               onClick={() => {
@@ -92,10 +92,10 @@ export const AuthLogin: React.FC<AuthLoginProps> = ({ onLoginSuccess }) => {
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`py-1 text-xs font-medium rounded-md transition-all ${
+              className={`py-1.5 text-xs font-semibold rounded-full transition-all ${
                 mode === 'signin'
-                  ? 'bg-zinc-800 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#0A2647] text-white shadow-sm'
+                  : 'text-[#9AA0A6] hover:text-[#1A1A1A]'
               }`}
             >
               Sign In
@@ -107,10 +107,10 @@ export const AuthLogin: React.FC<AuthLoginProps> = ({ onLoginSuccess }) => {
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`py-1 text-xs font-medium rounded-md transition-all ${
+              className={`py-1.5 text-xs font-semibold rounded-full transition-all ${
                 mode === 'signup'
-                  ? 'bg-zinc-800 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#0A2647] text-white shadow-sm'
+                  : 'text-[#9AA0A6] hover:text-[#1A1A1A]'
               }`}
             >
               Sign Up
@@ -118,69 +118,69 @@ export const AuthLogin: React.FC<AuthLoginProps> = ({ onLoginSuccess }) => {
           </div>
 
           {errorMessage && (
-            <div className="mb-3.5 p-2.5 rounded-lg bg-red-950/40 border border-red-800/50 flex items-start gap-2 text-xs text-red-300">
-              <AlertCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200/80 flex items-start gap-2.5 text-xs text-red-700">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-3.5 p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 flex items-start gap-2 text-xs text-emerald-300">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-start gap-2.5 text-xs text-emerald-800">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <span>{successMessage}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             {mode === 'signup' && (
               <div>
-                <label className="block text-[11px] font-medium text-zinc-300 mb-1">
+                <label className="block text-[11px] font-semibold text-[#1A1A1A] mb-1">
                   Company / Agency Name
                 </label>
                 <div className="relative">
-                  <Building2 className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Building2 className="w-4 h-4 text-[#9AA0A6] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="e.g. Kyoto Bespoke Journeys"
                     required
-                    className="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
+                    className="w-full pl-10 pr-3.5 py-2 bg-[#F5F6F8] border border-slate-200 rounded-xl text-xs text-[#1A1A1A] placeholder-[#9AA0A6] focus:outline-none focus:border-[#0A2647] transition-colors font-medium"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-[11px] font-medium text-zinc-300 mb-1">
+              <label className="block text-[11px] font-semibold text-[#1A1A1A] mb-1">
                 Operator Email
               </label>
               <div className="relative">
-                <Mail className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-[#9AA0A6] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="operator@agency.com"
                   required
-                  className="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
+                  className="w-full pl-10 pr-3.5 py-2 bg-[#F5F6F8] border border-slate-200 rounded-xl text-xs text-[#1A1A1A] placeholder-[#9AA0A6] focus:outline-none focus:border-[#0A2647] transition-colors font-medium"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-zinc-300 mb-1">
+              <label className="block text-[11px] font-semibold text-[#1A1A1A] mb-1">
                 Password
               </label>
               <div className="relative">
-                <Lock className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-[#9AA0A6] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
                   required
-                  className="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
+                  className="w-full pl-10 pr-3.5 py-2 bg-[#F5F6F8] border border-slate-200 rounded-xl text-xs text-[#1A1A1A] placeholder-[#9AA0A6] focus:outline-none focus:border-[#0A2647] transition-colors font-medium"
                 />
               </div>
             </div>
@@ -188,10 +188,10 @@ export const AuthLogin: React.FC<AuthLoginProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2 px-4 bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 mt-3.5 shadow-sm"
+              className="w-full py-2.5 px-4 bg-[#0A2647] hover:bg-[#081f3a] text-white text-xs font-semibold rounded-full flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 mt-4 shadow-md shadow-[#0A2647]/15 active:scale-[0.99]"
             >
               {loading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
               ) : (
                 <>
                   <span>{mode === 'signin' ? 'Sign In to Dashboard' : 'Create Operator Account'}</span>

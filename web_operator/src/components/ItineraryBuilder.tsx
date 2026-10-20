@@ -64,10 +64,11 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
   const loadData = async () => {
     let itin = await dbService.getItineraryForRequest(request.id);
     if (!itin) {
+      const activeOp = await dbService.getActiveOperator();
       itin = {
         id: `itin-${request.id}`,
         request_id: request.id,
-        operator_id: request.operator_id,
+        operator_id: activeOp?.id || request.operator_id || null,
         version: 1,
         status: request.status === 'quoted' ? 'sent_to_user' : request.status === 'finalized' ? 'finalized' : 'draft',
         total_base_cost: 0,
@@ -216,15 +217,45 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
 
   const handleSendQuotation = async () => {
     if (!itinerary) return;
+    const activeOp = await dbService.getActiveOperator();
+    const resolvedOpId = (activeOp?.id && activeOp.id !== '00000000-0000-0000-0000-000000000000' && activeOp.id !== '11111111-1111-1111-1111-111111111111') 
+      ? activeOp.id 
+      : (itinerary.operator_id && itinerary.operator_id !== '00000000-0000-0000-0000-000000000000' && itinerary.operator_id !== '11111111-1111-1111-1111-111111111111')
+        ? itinerary.operator_id
+        : 'dc3d36fb-0502-432a-920d-c3daa95c981a';
+
     const updatedItin: Itinerary = {
       ...itinerary,
+      operator_id: resolvedOpId,
       status: 'sent_to_user',
       version: itinerary.version + 1,
     };
     setItinerary(updatedItin);
     await dbService.saveItinerary(updatedItin);
     await dbService.updateRequestStatus(request.id, 'quoted');
-    alert(`Quotation of $${itinerary.final_quotation_price.toLocaleString()} saved in database and marked as Quoted.`);
+
+    try {
+      await fetch('/api/quotations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-id': resolvedOpId
+        },
+        body: JSON.stringify({
+          trip_request_id: request.id,
+          operator_id: resolvedOpId,
+          title: `${request.destination} Customized Itinerary`,
+          status: 'sent',
+          currency: 'INR',
+          nodes,
+          edges
+        })
+      });
+    } catch (err) {
+      console.warn('Failed to sync quotation to quotations table:', err);
+    }
+
+    alert(`Quotation of ₹${itinerary.final_quotation_price.toLocaleString()} saved in database and marked as Quoted.`);
   };
 
   const handleApplyNegotiatedPrice = async (newNodes: ItineraryNode[]) => {

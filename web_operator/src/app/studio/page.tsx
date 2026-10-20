@@ -33,14 +33,18 @@ import {
   Save
 } from 'lucide-react';
 import Link from 'next/link';
-import { TripRequest } from '../../lib/types';
+import { TripRequest, TourOperator } from '../../lib/types';
+import { dbService } from '../../lib/dbService';
 import { DarkItineraryNode } from '../../components/canvas/DarkItineraryNode';
+import { AnimatedPriceCounter } from '../../components/AnimatedPriceCounter';
 
 // --- 1. MAIN CANVAS COMPONENT ---
 function CanvasInner() {
   const searchParams = useSearchParams();
-  const paramTripId = searchParams.get('trip_id');
+  const paramTripId = searchParams?.get('trip_id');
+  const paramOperatorId = searchParams?.get('operator_id');
 
+  const [operator, setOperator] = useState<TourOperator | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -51,6 +55,12 @@ function CanvasInner() {
   const [tripId, setTripId] = useState<string>(paramTripId || '0ec1aea6-9bb9-45a4-963a-e2c994ff7997');
   const [currentTrip, setCurrentTrip] = useState<TripRequest | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    dbService.getActiveOperator().then((op) => {
+      if (op) setOperator(op);
+    }).catch(console.warn);
+  }, []);
 
   const { fitView } = useReactFlow();
 
@@ -141,7 +151,7 @@ function CanvasInner() {
       const hydrated = json.hydrated_items || { hotels: [], places: [], activities: [], transport: [] };
       setCurrentTrip(trip);
 
-      // Hydrate customer-selected items into sleek horizontal Dark Nodes
+      // Hydrate customer-selected items into sleek horizontal luxury cards
       const initialNodes: Node[] = [];
       let colIdx = 0;
 
@@ -299,8 +309,8 @@ function CanvasInner() {
         `Destination: ${dest}${groupInfo}\n` +
         `Dates: ${dates}\n` +
         `Target Budget: ₹${Number(budget).toLocaleString()}\n\n` +
-        `→ Rendered ${initialNodes.length} traveler selections on canvas as dark nodes with live margin controls.\n` +
-        `→ Click 'Auto-Draft with AI' to let the ReAct Agent synthesize the chronological route, transit edges, and schedule.`
+        `→ Rendered ${initialNodes.length} traveler selections on canvas as cards with live margin controls.\n` +
+        `→ Click 'Auto-Draft with AI' to let the ReAct Agent synthesize the sequential route and transit connections.`
       );
 
       setTimeout(() => {
@@ -319,7 +329,7 @@ function CanvasInner() {
     ...connection,
     animated: true,
     type: 'smoothstep',
-    style: { stroke: '#06b6d4', strokeWidth: 2 }
+    style: { stroke: '#0F172A', strokeWidth: 2 }
   }, eds)), []);
 
   // --- TRIGGER THE AGENTIC AI ---
@@ -398,14 +408,14 @@ function CanvasInner() {
         };
       });
 
-      // Format cyan smoothstep edges
+      // Format deep navy smoothstep edges
       const formattedEdges: Edge[] = rawEdges.map((edge: any, idx: number) => ({
         id: String(edge.id || `edge-${idx + 1}`),
         source: String(edge.source || edge.source_node_id),
         target: String(edge.target || edge.target_node_id),
         animated: edge.animated ?? true,
         type: 'smoothstep',
-        style: { stroke: '#06b6d4', strokeWidth: 2 },
+        style: { stroke: '#0F172A', strokeWidth: 2 },
         ...edge
       }));
 
@@ -469,11 +479,21 @@ function CanvasInner() {
     setSaveStatus(null);
 
     try {
+      const activeOp = operator || (await dbService.getActiveOperator());
+      const resolvedOperatorId = 
+        (paramOperatorId && paramOperatorId !== '00000000-0000-0000-0000-000000000000' && paramOperatorId !== '11111111-1111-1111-1111-111111111111' ? paramOperatorId : null) || 
+        activeOp?.id || 
+        'dc3d36fb-0502-432a-920d-c3daa95c981a';
+
       const res = await fetch('/api/quotations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(resolvedOperatorId ? { 'x-operator-id': resolvedOperatorId } : {})
+        },
         body: JSON.stringify({
           trip_request_id: tripId.trim(),
+          operator_id: resolvedOperatorId,
           title: currentTrip ? `${currentTrip.destination} Customized Itinerary` : 'Customized Itinerary Quotation',
           status,
           currency: 'INR',
@@ -487,12 +507,13 @@ function CanvasInner() {
         throw new Error(data.error || 'Failed to save quotation');
       }
 
+      const opName = activeOp?.company_name || 'Operator';
       const msg = status === 'sent' 
-        ? `Quotation sent to traveler! Total: ₹${financials.totalQuotationPrice.toLocaleString()} (${nodes.length} items)`
+        ? `Quotation sent by ${opName} to traveler! Total: ₹${financials.totalQuotationPrice.toLocaleString()} (${nodes.length} items)`
         : `Draft saved successfully! (${nodes.length} items)`;
 
       setSaveStatus(msg);
-      setAgentThoughts((prev) => `${prev}\n\n✓ ${msg}\nStatus: Quotation ID: ${data.quotation?.id || 'Saved'}`);
+      setAgentThoughts((prev) => `${prev}\n\n✓ ${msg}\nStatus: Quotation ID: ${data.quotation?.id || 'Saved'}\nOperator ID: ${data.quotation?.operator_id || resolvedOperatorId}`);
 
     } catch (err: any) {
       console.error(err);
@@ -503,24 +524,24 @@ function CanvasInner() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#0a0f1d] text-slate-100 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-[#FAF9F6] text-[#0F172A] overflow-hidden font-sans">
       
-      {/* LEFT SIDEBAR: Agent Terminal & Quotation Controls */}
-      <div className="w-[440px] border-r border-neutral-800 bg-[#121212] p-5 flex flex-col justify-between shadow-2xl z-10 overflow-y-auto">
+      {/* LEFT SIDEBAR: Quotation Engine & Agent Brain */}
+      <div className="w-[430px] border-r border-slate-200 bg-white p-5 flex flex-col justify-between shadow-lg z-10 overflow-y-auto">
         <div>
           {/* Header navigation & title */}
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
-                <h2 className="text-base font-bold text-white tracking-tight">Operator Studio</h2>
+                <span className="h-2 w-2 rounded-full bg-[#0F172A] animate-ping" />
+                <h2 className="text-base font-bold text-[#0F172A] tracking-tight">Operator Studio</h2>
               </div>
-              <p className="text-[11px] text-neutral-400 mt-0.5">Interactive Itinerary & Quotation Engine</p>
+              <p className="text-[11px] text-[#64748B] mt-0.5">Interactive Itinerary & Quotation Engine</p>
             </div>
 
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white px-2.5 py-1.5 rounded-lg border border-neutral-800 bg-neutral-900 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-[#64748B] hover:text-[#0F172A] px-3 py-1.5 rounded-full border border-slate-200 bg-[#FAF9F6] transition-colors font-medium shadow-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Dashboard</span>
@@ -529,75 +550,75 @@ function CanvasInner() {
 
           {/* Active Trip Request Badge */}
           {currentTrip && (
-            <div className="mb-3.5 bg-[#181818] p-3 rounded-xl border border-neutral-800 space-y-1.5">
+            <div className="mb-3.5 bg-[#FAF9F6] p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
                   <span>{currentTrip.destination}</span>
                   {currentTrip.trip_mode && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-800/50">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white text-[#0F172A] border border-slate-200">
                       {currentTrip.trip_mode}
                     </span>
                   )}
                 </span>
-                <span className="text-xs font-mono font-semibold text-neutral-300">
+                <span className="text-xs font-semibold text-[#0F172A]">
                   Target: ₹{Number(currentTrip.per_person_budget || currentTrip.budget_range?.[0] || 0).toLocaleString()}
                 </span>
               </div>
-              <div className="text-[11px] text-neutral-400 flex items-center justify-between pt-0.5">
+              <div className="text-[11px] text-[#64748B] flex items-center justify-between pt-0.5">
                 <span>{currentTrip.travel_dates}</span>
-                <span className="font-mono text-[10px] text-cyan-400">
-                  {nodes.length} nodes active
+                <span className="text-[11px] text-[#0F172A] font-semibold">
+                  {nodes.length} items on canvas
                 </span>
               </div>
             </div>
           )}
 
           {/* REAL-TIME FINANCIAL QUOTATION SUMMARY */}
-          <div className="mb-4 rounded-xl border border-neutral-800 bg-[#161616] p-3.5 shadow-inner">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
-                <DollarSign className="w-3 h-3 text-cyan-400" />
-                Live Quotation Breakdown
+          <div className="mb-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-semibold text-[#0F172A] flex items-center gap-1">
+                <DollarSign className="w-3.5 h-3.5 text-[#0F172A]" />
+                Quotation Breakdown
               </span>
-              <span className="text-[10px] font-mono text-cyan-400 font-semibold">
+              <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 font-semibold">
                 +{financials.avgMarginPercent}% Margin
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-              <div className="bg-[#1f1f1f] p-2 rounded border border-neutral-800">
-                <span className="block text-[10px] text-neutral-500 uppercase">Total Base Cost</span>
-                <span className="font-mono font-semibold text-neutral-300 text-sm">
-                  ₹{financials.totalBaseCost.toLocaleString()}
+            <div className="grid grid-cols-2 gap-2 text-xs mb-2.5">
+              <div className="bg-[#FAF9F6] p-2.5 rounded-xl border border-slate-200/60">
+                <span className="block text-[11px] text-[#64748B] font-medium">Total Base Cost</span>
+                <span className="font-semibold text-[#0F172A] text-sm font-mono-numeric">
+                  <AnimatedPriceCounter value={financials.totalBaseCost} />
                 </span>
               </div>
-              <div className="bg-[#1f1f1f] p-2 rounded border border-neutral-800">
-                <span className="block text-[10px] text-neutral-500 uppercase">Operator Margin</span>
-                <span className="font-mono font-semibold text-cyan-400 text-sm">
-                  +₹{financials.totalMargin.toLocaleString()}
+              <div className="bg-[#FAF9F6] p-2.5 rounded-xl border border-slate-200/60">
+                <span className="block text-[11px] text-[#64748B] font-medium">Operator Margin</span>
+                <span className="font-bold text-[#0F172A] text-sm font-mono-numeric">
+                  +<AnimatedPriceCounter value={financials.totalMargin} />
                 </span>
               </div>
             </div>
 
-            <div className="border-t border-neutral-800 pt-2 flex items-center justify-between">
-              <span className="text-xs font-semibold text-neutral-300">Customer Quote:</span>
-              <span className="text-base font-bold font-mono text-white">
-                ₹{financials.totalQuotationPrice.toLocaleString()}
+            <div className="border-t border-slate-100 pt-2.5 flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#64748B]">Client Total Quote:</span>
+              <span className="text-lg font-bold font-heading text-[#0F172A]">
+                <AnimatedPriceCounter value={financials.totalQuotationPrice} />
               </span>
             </div>
           </div>
 
           {/* Trip Request ID input */}
-          <div className="mb-3.5 bg-[#181818] p-3 rounded-xl border border-neutral-800">
-            <label className="block text-[10px] font-mono uppercase text-neutral-400 mb-1 font-semibold">
-              Trip Request UUID
+          <div className="mb-3.5 bg-[#FAF9F6] p-3 rounded-2xl border border-slate-200/80">
+            <label className="block text-xs font-semibold text-[#0F172A] mb-1">
+              Trip Request Reference
             </label>
             <input
               type="text"
               value={tripId}
               onChange={(e) => setTripId(e.target.value)}
               placeholder="e.g. 0ec1aea6-9bb9-45a4-963a-e2c994ff7997"
-              className="w-full text-xs font-mono bg-[#121212] border border-neutral-700/80 rounded px-2.5 py-1.5 text-neutral-200 focus:outline-none focus:border-cyan-500"
+              className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[#0F172A] focus:outline-none focus:border-[#0F172A] font-medium"
             />
           </div>
 
@@ -606,7 +627,7 @@ function CanvasInner() {
             <button
               onClick={handleAutoDraft}
               disabled={isGenerating}
-              className="flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2.5 font-semibold text-xs text-white shadow-lg shadow-cyan-600/20 transition-all hover:from-cyan-500 hover:to-blue-500 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
+              className="btn-interactive btn-glow-sweep flex items-center justify-center rounded-full bg-[#0F172A] hover:bg-[#081f3a] px-4 py-2.5 font-semibold text-xs text-white shadow-md shadow-[#0F172A]/15 disabled:opacity-50 disabled:pointer-events-none"
             >
               {isGenerating ? (
                 <span className="flex items-center gap-2">
@@ -615,7 +636,7 @@ function CanvasInner() {
                 </span>
               ) : (
                 <span className="flex items-center">
-                  <Sparkles className="mr-2 h-4 w-4 text-cyan-200" />
+                  <Sparkles className="mr-2 h-4 w-4 text-cyan-300" />
                   <span>Auto-Draft with AI</span>
                 </span>
               )}
@@ -625,55 +646,56 @@ function CanvasInner() {
               <button
                 onClick={() => handleSaveQuotation('sent')}
                 disabled={isSavingQuotation || nodes.length === 0}
-                className="flex items-center justify-center rounded-xl bg-emerald-600 px-3 py-2 font-semibold text-xs text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-500 active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none"
+                className="btn-interactive flex items-center justify-center rounded-full bg-[#0F172A] hover:bg-[#081f3a] px-3 py-2 font-semibold text-xs text-white shadow-sm disabled:opacity-40 disabled:pointer-events-none"
               >
-                <Send className="mr-1.5 h-3.5 w-3.5 text-emerald-200" />
+                <Send className="mr-1.5 h-3.5 w-3.5 text-white" />
                 <span>Send to Traveler</span>
               </button>
 
               <button
                 onClick={() => handleSaveQuotation('draft')}
                 disabled={isSavingQuotation || nodes.length === 0}
-                className="flex items-center justify-center rounded-xl border border-neutral-700 bg-neutral-800 px-3 py-2 font-semibold text-xs text-neutral-300 transition-all hover:bg-neutral-700 active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none"
+                className="btn-interactive flex items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-[#FAF9F6] px-3 py-2 font-semibold text-xs text-[#0F172A] disabled:opacity-40 disabled:pointer-events-none"
               >
-                <Save className="mr-1.5 h-3.5 w-3.5 text-neutral-400" />
+                <Save className="mr-1.5 h-3.5 w-3.5 text-[#64748B]" />
                 <span>Save Draft</span>
               </button>
             </div>
 
             {saveStatus && (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/40 border border-emerald-900/60 px-3 py-1.5 rounded-lg animate-in fade-in">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="text-[11px] truncate">{saveStatus}</span>
+              <div className="flex items-center gap-1.5 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full animate-in fade-in">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                <span className="text-[11px] truncate font-medium">{saveStatus}</span>
               </div>
             )}
           </div>
         </div>
 
         {/* The Agent "Brain" Display */}
-        <div className="flex-1 flex flex-col rounded-xl border border-neutral-800 bg-[#0d0d0d] overflow-hidden shadow-2xl min-h-[200px]">
-          <div className="flex items-center justify-between border-b border-neutral-800 bg-[#161616] px-3.5 py-1.5">
+        <div className="flex-1 flex flex-col rounded-2xl border border-slate-800 bg-[#0B132B] overflow-hidden shadow-lg min-h-[190px]">
+          <div className="flex items-center justify-between border-b border-slate-800 bg-[#0F172A] px-3.5 py-2">
             <div className="flex items-center">
-              <Terminal className="mr-1.5 h-3 w-3 text-cyan-400" />
-              <span className="text-[11px] font-mono font-bold text-neutral-300 tracking-wider">TERMINAL LOG</span>
+              <Terminal className="mr-1.5 h-3.5 w-3.5 text-cyan-400" />
+              <span className="text-[11px] font-mono font-bold text-white tracking-wider">TERMINAL LOG</span>
             </div>
             {isGenerating && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                RUNNING
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-300 tool-flash">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />
+                TOOL RUNNING
               </span>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-3 font-mono text-[11px] text-cyan-300 leading-relaxed scrollbar-thin scrollbar-thumb-neutral-800">
+          <div className="flex-1 overflow-y-auto p-3.5 font-mono text-[11px] text-cyan-100/90 leading-relaxed scrollbar-thin scrollbar-thumb-slate-800">
             <pre className="whitespace-pre-wrap font-mono">
               {agentThoughts || '// Ready for operation.\n// Click "Auto-Draft with AI" to generate connected schedule.'}
+              <span className="cursor-block" />
             </pre>
           </div>
         </div>
       </div>
 
-      {/* RIGHT SIDE: React Flow Canvas with Dark Itinerary Nodes */}
-      <div className="flex-1 relative h-full bg-[#0a0f1d]">
+      {/* RIGHT SIDE: React Flow Canvas with Luxury Itinerary Nodes */}
+      <div className="flex-1 relative h-full bg-[#FAF9F6]">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -683,17 +705,17 @@ function CanvasInner() {
           nodeTypes={nodeTypes}
           fitView
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#1e293b" />
-          <Controls className="!bg-[#121212] !border-neutral-800 !fill-neutral-300 [&>button]:!bg-[#1a1a1a] [&>button]:!border-neutral-700 hover:[&>button]:!bg-[#2a2a2a]" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#CBD5E1" />
+          <Controls className="!bg-white !border-slate-200 !fill-[#0F172A] shadow-md rounded-2xl [&>button]:!bg-white [&>button]:!border-slate-200 hover:[&>button]:!bg-[#FAF9F6]" />
         </ReactFlow>
 
         {nodes.length === 0 && !isGenerating && (
-          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-neutral-500 p-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#121212] border border-neutral-800 flex items-center justify-center mb-3 text-cyan-400">
-              <Sparkles className="w-7 h-7" />
+          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-[#64748B] p-6">
+            <div className="w-14 h-14 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-3 text-[#0F172A] shadow-sm">
+              <Sparkles className="w-6 h-6" />
             </div>
-            <p className="text-sm font-semibold text-neutral-300">Canvas Ready</p>
-            <p className="text-xs text-neutral-500 max-w-sm text-center mt-1">
+            <p className="text-sm font-bold text-[#0F172A]">Canvas Ready</p>
+            <p className="text-xs text-[#64748B] max-w-sm text-center mt-1">
               Trip Request #{tripId.slice(0, 8)}... loaded. Use &quot;Auto-Draft with AI&quot; or connect nodes to draft the itinerary quotation.
             </p>
           </div>
@@ -708,7 +730,7 @@ export default function ItineraryStudio() {
   return (
     <ReactFlowProvider>
       <Suspense fallback={
-        <div className="flex h-screen w-full items-center justify-center bg-[#0a0f1d] text-neutral-400 font-mono text-xs">
+        <div className="flex h-screen w-full items-center justify-center bg-[#FAF9F6] text-[#64748B] font-mono text-xs">
           Loading Operator Studio...
         </div>
       }>

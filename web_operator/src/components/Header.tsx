@@ -2,7 +2,17 @@
 
 import React from 'react';
 import { TourOperator } from '../lib/types';
-import { Compass, Sparkles, LogOut, LayoutDashboard, UserCheck, Layers } from 'lucide-react';
+import { 
+  Compass, 
+  Sparkles, 
+  LogOut, 
+  LayoutDashboard, 
+  UserCheck, 
+  Layers, 
+  Bell, 
+  ShieldCheck,
+  Clock
+} from 'lucide-react';
 
 interface HeaderProps {
   operator: TourOperator | null;
@@ -20,101 +30,139 @@ export const Header: React.FC<HeaderProps> = ({
   hasActiveRequest,
 }) => {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-800 bg-[#09090b]/90 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-13 py-3 flex items-center justify-between">
-        {/* Brand */}
-        <div className="flex items-center gap-6">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white shadow-xs">
+      {/* Top Travel Desk Bar */}
+      <div className="bg-[#0A2647] text-white px-4 sm:px-8 py-1.5 text-xs flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-slate-200 font-medium">
+            <Compass className="w-3.5 h-3.5 text-amber-300" />
+            <span>Tour Operator Desk</span>
+          </span>
+          <span className="hidden sm:inline text-slate-500">•</span>
+          <span className="hidden sm:inline text-slate-300 text-[11px]">
+            Mumbai • Rajasthan • Goa • Tokyo
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3 text-slate-300 text-[11px]">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span className="text-emerald-300 font-medium">Desk Open</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Main Navigation Bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
+        {/* Brand Identity */}
+        <div className="flex items-center gap-8">
           <div 
             onClick={() => setActiveView('dashboard')}
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-6 h-6 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-200">
-              <Compass className="w-3.5 h-3.5" />
+            <div className="w-9 h-9 rounded-xl bg-[#0A2647] flex items-center justify-center text-white shadow-md shadow-[#0A2647]/15 transition-transform group-hover:scale-105">
+              <Compass className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold tracking-tight text-white text-xs">JOURNEY OPERATOR</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading font-bold tracking-tight text-[#0A2647] text-base">
+                  JOURNEY
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F5F6F8] text-[#0A2647] border border-slate-200">
+                  Concierge
+                </span>
+              </div>
+              <p className="text-[11px] text-[#9AA0A6] font-medium leading-none mt-0.5">
+                Boutique Tour Operator Portal
+              </p>
+            </div>
           </div>
 
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-1 pl-4 border-l border-zinc-800">
+          {/* Core Navigation Tabs */}
+          <nav className="hidden lg:flex items-center gap-1.5 pl-6 border-l border-slate-200">
             <button
               onClick={() => setActiveView('dashboard')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`btn-interactive flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold ${
                 activeView === 'dashboard'
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#0A2647] text-white shadow-xs'
+                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
               }`}
             >
-              <LayoutDashboard className="w-3.5 h-3.5 text-zinc-400" />
-              Requests
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>Trip Inquiries</span>
             </button>
 
             {hasActiveRequest && (
               <button
                 onClick={() => setActiveView('builder')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`btn-interactive flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold ${
                   activeView === 'builder'
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-[#0A2647] text-white shadow-xs'
+                    : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
-                Canvas & AI
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Custom Builder</span>
               </button>
             )}
 
             <button
               onClick={() => setActiveView('inventory')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`btn-interactive flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold ${
                 activeView === 'inventory'
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#0A2647] text-white shadow-xs'
+                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 text-zinc-400" />
-              Tied-Up Partners
+              <Layers className="w-3.5 h-3.5" />
+              <span>Hotels & Stays</span>
             </button>
 
             <button
               onClick={() => setActiveView('guides')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`btn-interactive flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold ${
                 activeView === 'guides'
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#0A2647] text-white shadow-xs'
+                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
               }`}
             >
-              <UserCheck className="w-3.5 h-3.5 text-zinc-400" />
-              Guides
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Local Guides</span>
             </button>
 
             <a
-              href="/studio"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40 border border-indigo-800/50"
+              href={operator?.id ? `/studio?operator_id=${encodeURIComponent(operator.id)}` : '/studio'}
+              className="btn-interactive flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#0A2647] bg-[#F1F5F9] hover:bg-slate-200 border border-slate-200/80 shadow-2xs ml-1"
             >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              Agent Studio
+              <Sparkles className="w-3.5 h-3.5 text-[#0A2647]" />
+              <span>Itinerary Studio</span>
             </a>
           </nav>
         </div>
 
-        {/* Right Operator Info */}
-        <div className="flex items-center gap-3">
+        {/* Right Operator Profile & Quick Stats */}
+        <div className="flex items-center gap-3.5">
           {operator && (
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-medium text-zinc-200 leading-none">
+                <p className="text-xs font-bold text-[#0F172A] leading-tight">
                   {operator.company_name}
                 </p>
-                <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">
+                <p className="text-[10px] text-[#64748B] leading-tight mt-0.5">
                   {operator.contact_email}
                 </p>
+              </div>
+
+              <div className="w-8 h-8 rounded-full bg-[#0A2647] text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                {operator.company_name ? operator.company_name.charAt(0).toUpperCase() : 'V'}
               </div>
 
               <button
                 onClick={onLogout}
                 title="Log Out"
-                className="p-1.5 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                className="btn-interactive p-2 rounded-full text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100 transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           )}
