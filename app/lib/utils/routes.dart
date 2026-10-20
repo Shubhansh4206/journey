@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,6 +18,7 @@ import '../screens/create_group_screen.dart';
 import '../screens/group_detail_screen.dart';
 import '../screens/itinerary_cart_screen.dart';
 import '../screens/quotation_negotiation_screen.dart';
+import '../screens/gemini_agent_chat_screen.dart';
 import '../services/profile_service.dart';
 import '../services/travel_mode_service.dart';
 
@@ -62,6 +63,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => ProfileOnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/ai-agent',
+      builder: (context, state) => const GeminiAgentChatScreen(),
     ),
     GoRoute(
       path: '/invites',
@@ -176,3 +181,5 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
+
+

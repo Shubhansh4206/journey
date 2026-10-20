@@ -104,6 +104,10 @@ class TourPackage {
     this.rejectionReason,
     this.acceptedAt,
   });
+
+  bool get isOngoing => status == PackageStatus.inProgress;
+  bool get isAcceptedOrOngoing =>
+      status == PackageStatus.accepted || status == PackageStatus.inProgress;
 }
 
 class ChatMessage {
@@ -116,6 +120,7 @@ class ChatMessage {
   final String message;
   final DateTime timestamp;
   final bool isAnnouncement;
+  final bool isSosAlert;
 
   ChatMessage({
     required this.id,
@@ -127,5 +132,66 @@ class ChatMessage {
     required this.message,
     required this.timestamp,
     this.isAnnouncement = false,
+    this.isSosAlert = false,
+  });
+}
+
+/// Tour Operator 24/7 Operations Command & Dispatch metadata
+class TourOperatorContact {
+  final String name;
+  final String dutyDesk;
+  final String hotlinePhone;
+  final String secondaryPhone;
+  final String email;
+  final String address;
+
+  const TourOperatorContact({
+    this.name = 'Journey Horizons Expeditions Ltd.',
+    this.dutyDesk = '24/7 Central Operations Control & Dispatch',
+    this.hotlinePhone = '+91 1800-568-7639', // 1800-JOURNEY
+    this.secondaryPhone = '+91 98200 99112',
+    this.email = 'emergency-ops@journeyguide.com',
+    this.address = 'Nariman Point Operations Tower, Mumbai, India',
+  });
+}
+
+/// Model representing a live SOS Emergency Alert triggered during an ongoing or active tour
+class SosEmergencyAlert {
+  final String id;
+  final String packageId;
+  final String tourTitle;
+  final String destination;
+  final String guideId;
+  final String guideName;
+  final String guidePhone;
+  final DateTime timestamp;
+  final double latitude;
+  final double longitude;
+  final String locationName;
+  final String emergencyType; // e.g. 'Medical', 'Tourist Lost', 'Breakdown', 'Weather', 'Security', 'General'
+  final String notes;
+  final TourOperatorContact operatorContact;
+  bool isResolved;
+  DateTime? resolvedAt;
+  String? resolutionNotes;
+
+  SosEmergencyAlert({
+    required this.id,
+    required this.packageId,
+    required this.tourTitle,
+    required this.destination,
+    required this.guideId,
+    required this.guideName,
+    required this.guidePhone,
+    required this.timestamp,
+    required this.latitude,
+    required this.longitude,
+    required this.locationName,
+    this.emergencyType = 'General Urgent Emergency',
+    this.notes = '',
+    this.operatorContact = const TourOperatorContact(),
+    this.isResolved = false,
+    this.resolvedAt,
+    this.resolutionNotes,
   });
 }

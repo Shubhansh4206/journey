@@ -20,6 +20,12 @@ class _GuideAppState extends State<GuideApp> {
   final GuideState _guideState = GuideState();
 
   @override
+  void initState() {
+    super.initState();
+    _guideState.initSupabaseSync();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Journey - Guide Command Portal',

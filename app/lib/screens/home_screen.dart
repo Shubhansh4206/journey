@@ -176,6 +176,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 SliverToBoxAdapter(child: _buildSearchBar()),
                 const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
+                // Conversational Agentic AI Call to Action
+                SliverToBoxAdapter(child: _buildAiAgentCtaCard()),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
                 // Vibe Category Filters
                 SliverToBoxAdapter(child: _buildVibeCategories()),
                 const SliverToBoxAdapter(child: SizedBox(height: 20)),
@@ -492,7 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Text('👋', style: TextStyle(fontSize: 18)),
+                          const Text('', style: TextStyle(fontSize: 18)),
                         ],
                       ),
                       Text(
@@ -509,57 +513,188 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Notifications Bell with Live Badge
-          Obx(() {
-            final inviteCount = _groupController.pendingInvitesCount.value;
-
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 38, minHeight: 38),
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: AppColors.darkCharcoal,
-                    size: 24,
+          // Header Actions: AI Quick Action + Notifications Bell
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Normal Ask AI action button in header
+              InkWell(
+                onTap: () => context.push('/ai-agent'),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  tooltip: 'Group Invitations',
-                  onPressed: () async {
-                    await context.push('/invites');
-                    _groupController.fetchPendingInvitesCount();
-                  },
-                ),
-                if (inviteCount > 0)
-                  Positioned(
-                    right: 2,
-                    top: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF0052),
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
-                      ),
-                      child: Text(
-                        inviteCount > 9 ? '9+' : '$inviteCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.smart_toy_outlined, color: Color(0xFF0F172A), size: 14),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Ask AI',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF0F172A),
                         ),
-                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+
+              // Notifications Bell with Live Badge
+              Obx(() {
+                final inviteCount = _groupController.pendingInvitesCount.value;
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 38, minHeight: 38),
+                      icon: const Icon(
+                        Icons.notifications_outlined,
+                        color: AppColors.darkCharcoal,
+                        size: 24,
+                      ),
+                      tooltip: 'Group Invitations',
+                      onPressed: () async {
+                        await context.push('/invites');
+                        _groupController.fetchPendingInvitesCount();
+                      },
+                    ),
+                    if (inviteCount > 0)
+                      Positioned(
+                        right: 2,
+                        top: 2,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF0052),
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            inviteCount > 9 ? '9+' : '$inviteCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Ask AI Call To Action ──────────────────────────────────────────────────
+  Widget _buildAiAgentCtaCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: InkWell(
+        onTap: () => context.push('/ai-agent'),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.smart_toy_outlined,
+                  color: Color(0xFF0F172A),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ask AI',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0F172A),
                       ),
                     ),
-                  ),
-              ],
-            );
-          }),
-        ],
+                    Text(
+                      'Plan itineraries, check budgets & get recommendations',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFF64748B),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Ask AI',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

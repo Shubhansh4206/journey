@@ -3,6 +3,8 @@ import '../models/guide_models.dart';
 import '../state/guide_state.dart';
 import '../theme/app_theme.dart';
 import 'tourist_chat_screen.dart';
+import 'itinerary_map_screen.dart';
+import 'sos_emergency_dialog.dart';
 
 class PackageDetailsScreen extends StatefulWidget {
   final TourPackage package;
@@ -19,6 +21,49 @@ class PackageDetailsScreen extends StatefulWidget {
 }
 
 class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
+  Future<void> _openMap(TourPackage pkg) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppTheme.primary),
+                SizedBox(height: 16),
+                Text(
+                  'Loading OpenStreetMap Route & Stops...',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final items = await widget.guideState.getItineraryLocationsForPackage(pkg);
+
+    if (mounted) {
+      Navigator.of(context).pop(); // dismiss loading
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ItineraryMapScreen(
+            title: pkg.title,
+            destination: pkg.destination,
+            payoutAmount: pkg.payoutAmount,
+            items: items,
+            package: pkg,
+            guideState: widget.guideState,
+          ),
+        ),
+      );
+    }
+  }
+
   void _showRejectDialog() {
     String selectedReason = 'Schedule conflict with existing booking';
     final customReasonController = TextEditingController();
@@ -123,14 +168,24 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
     required String groupValue,
     required ValueChanged<String?> onChanged,
   }) {
-    return RadioListTile<String>(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-      value: value,
-      groupValue: groupValue,
-      activeColor: AppTheme.danger,
-      onChanged: onChanged,
+    final isSelected = value == groupValue;
+    return InkWell(
+      onTap: () => onChanged(value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+              color: isSelected ? AppTheme.danger : AppTheme.textSecondary,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -182,6 +237,32 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
               SliverAppBar(
                 expandedHeight: 260,
                 pinned: true,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.map_rounded, color: Colors.white),
+                    tooltip: 'View OpenStreetMap Route',
+                    onPressed: () => _openMap(currentPkg),
+                  ),
+                  if (currentPkg.isAcceptedOrOngoing)
+                    IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: widget.guideState.isSosActive(currentPkg.id)
+                              ? const Color(0xFFDC2626)
+                              : Colors.white.withValues(alpha: 0.25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.crisis_alert_rounded, color: Colors.white, size: 18),
+                      ),
+                      tooltip: 'SOS Emergency Alert (Tour Operator)',
+                      onPressed: () => SosEmergencyDialog.show(
+                        context,
+                        package: currentPkg,
+                        guideState: widget.guideState,
+                      ),
+                    ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: Stack(
                     fit: StackFit.expand,
@@ -200,9 +281,9 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Colors.black.withOpacity(0.4),
+                              Colors.black.withValues(alpha: 0.4),
                               Colors.transparent,
-                              Colors.black.withOpacity(0.8),
+                              Colors.black.withValues(alpha: 0.8),
                             ],
                           ),
                         ),
@@ -217,19 +298,27 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: currentPkg.status == PackageStatus.accepted
-                                    ? AppTheme.success
-                                    : currentPkg.status == PackageStatus.rejected
-                                        ? AppTheme.danger
-                                        : AppTheme.secondary,
+                                color: widget.guideState.isSosActive(currentPkg.id)
+                                    ? const Color(0xFFDC2626)
+                                    : currentPkg.status == PackageStatus.inProgress
+                                        ? const Color(0xFF10B981)
+                                        : currentPkg.status == PackageStatus.accepted
+                                            ? AppTheme.success
+                                            : currentPkg.status == PackageStatus.rejected
+                                                ? AppTheme.danger
+                                                : AppTheme.secondary,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                currentPkg.status == PackageStatus.accepted
-                                    ? 'ASSIGNED & ACCEPTED'
-                                    : currentPkg.status == PackageStatus.rejected
-                                        ? 'DECLINED'
-                                        : 'NEW PACKAGE REQUEST',
+                                widget.guideState.isSosActive(currentPkg.id)
+                                    ? '🚨 SOS ACTIVE — OPERATOR ALERTED'
+                                    : currentPkg.status == PackageStatus.inProgress
+                                        ? 'LIVE ONGOING TRIP'
+                                        : currentPkg.status == PackageStatus.accepted
+                                            ? 'ASSIGNED & ACCEPTED'
+                                            : currentPkg.status == PackageStatus.rejected
+                                                ? 'DECLINED'
+                                                : 'NEW PACKAGE REQUEST',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -359,6 +448,69 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 16),
+
+                      // OpenStreetMap Interactive Route Card
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFBBF7D0), width: 1.5),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.map_rounded, color: Colors.white, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'OpenStreetMap Live Tour Route',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF065F46),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Interactive route polyline and verified GPS stops',
+                                        style: TextStyle(fontSize: 11.5, color: Color(0xFF047857)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F4C5C),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                icon: const Icon(Icons.explore_rounded, size: 18),
+                                label: const Text('Explore OpenStreetMap Canvas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                                onPressed: () => _openMap(currentPkg),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 24),
 
                       // Highlights
@@ -426,7 +578,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                               ),
                             ],
                           ),
-                          if (currentPkg.status == PackageStatus.accepted)
+                          if (currentPkg.status == PackageStatus.accepted || currentPkg.status == PackageStatus.inProgress)
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primary,
@@ -474,7 +626,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -625,13 +777,15 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   }
 
   Widget _buildBottomActionBar(TourPackage pkg) {
+    final isSos = widget.guideState.isSosActive(pkg.id);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -669,36 +823,124 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
                   ),
                 ],
               )
-            : pkg.status == PackageStatus.accepted
-                ? SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+            : pkg.status == PackageStatus.inProgress
+                ? Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isSos ? const Color(0xFF991B1B) : const Color(0xFFDC2626),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const Icon(Icons.crisis_alert_rounded, size: 18),
+                          label: Text(
+                            isSos ? 'OPERATOR ALERTED' : '🚨 SOS EMERGENCY',
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                          ),
+                          onPressed: () => SosEmergencyDialog.show(
+                            context,
+                            package: pkg,
+                            guideState: widget.guideState,
+                          ),
+                        ),
                       ),
-                      icon: const Icon(Icons.forum_rounded),
-                      label: Text('Connect with Tourists (${pkg.tourists.length} Travelers)'),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => TouristChatScreen(
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const Icon(Icons.forum_rounded, size: 18),
+                          label: const Text('Group Chat', style: TextStyle(fontWeight: FontWeight.w700)),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => TouristChatScreen(
+                                  package: pkg,
+                                  guideState: widget.guideState,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  )
+                : pkg.status == PackageStatus.accepted
+                    ? Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0F4C5C),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              icon: const Icon(Icons.play_circle_filled_rounded, size: 18),
+                              label: const Text('Start Tour', style: TextStyle(fontWeight: FontWeight.w800)),
+                              onPressed: () {
+                                widget.guideState.startTour(pkg.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Tour "${pkg.title}" is now Ongoing!'),
+                                    backgroundColor: AppTheme.success,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 3,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              icon: const Icon(Icons.forum_rounded, size: 18),
+                              label: const Text('Group Chat'),
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => TouristChatScreen(
+                                      package: pkg,
+                                      guideState: widget.guideState,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: isSos ? const Color(0xFF991B1B) : const Color(0xFFDC2626),
+                              padding: const EdgeInsets.all(14),
+                            ),
+                            icon: const Icon(Icons.crisis_alert_rounded, color: Colors.white, size: 20),
+                            tooltip: 'Emergency SOS Alert',
+                            onPressed: () => SosEmergencyDialog.show(
+                              context,
                               package: pkg,
                               guideState: widget.guideState,
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  )
-                : SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Restore / Re-evaluate Package'),
-                      onPressed: () => widget.guideState.restorePackage(pkg.id),
-                    ),
-                  ),
+                        ],
+                      )
+                    : SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Restore / Re-evaluate Package'),
+                          onPressed: () => widget.guideState.restorePackage(pkg.id),
+                        ),
+                      ),
       ),
     );
   }
