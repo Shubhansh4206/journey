@@ -17,6 +17,7 @@ import {
   Clock, 
   Star 
 } from 'lucide-react';
+import { AnimatedPriceCounter } from '../AnimatedPriceCounter';
 
 export interface DarkItineraryNodeData {
   id?: string;
@@ -106,30 +107,30 @@ export const DarkItineraryNode = memo(({ id, data }: NodeProps) => {
   const locationText = nodeData.location || nodeData.location_subtitle || 'Destination';
 
   return (
-    <div className="w-80 rounded-xl border border-neutral-800 bg-[#121212] p-4 text-white shadow-2xl font-sans transition-all duration-150 hover:border-neutral-700">
+    <div className="w-80 rounded-2xl border border-slate-100 bg-white p-5 text-[#0F172A] shadow-[0_8px_30px_rgb(0,0,0,0.05)] hover:shadow-[0_12px_35px_rgba(10,38,71,0.08)] font-sans transition-all duration-200">
       
       {/* HEADER */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center text-neutral-400">
-          <GripVertical className="mr-1.5 h-4 w-4 cursor-grab hover:text-white" />
-          <Icon className="mr-2 h-4 w-4 text-cyan-400" />
-          <span className="text-[11px] font-bold tracking-wider uppercase text-neutral-300">{rawType}</span>
+      <div className="flex items-center justify-between mb-3.5">
+        <div className="flex items-center text-[#64748B]">
+          <GripVertical className="mr-1.5 h-4 w-4 cursor-grab hover:text-[#0F172A]" />
+          <Icon className="mr-2 h-4 w-4 text-[#0F172A]" />
+          <span className="text-[11px] font-bold tracking-wider uppercase text-[#0F172A]">{rawType}</span>
           {nodeData.day !== undefined && (
-            <span className="ml-2 text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400">
+            <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#FAF9F6] text-[#0F172A] border border-slate-200">
               D{nodeData.day}
             </span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
           {nodeData.badge && (
-            <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
               {nodeData.badge}
             </span>
           )}
           <button 
             onClick={handleDelete}
             title="Remove item"
-            className="text-neutral-500 hover:text-red-400 transition-colors p-1 rounded hover:bg-neutral-800/80"
+            className="text-[#64748B] hover:text-red-500 hover:bg-red-50 transition-colors p-1.5 rounded-full"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -138,15 +139,15 @@ export const DarkItineraryNode = memo(({ id, data }: NodeProps) => {
 
       {/* TITLE & SUBTITLE */}
       <div className="mb-4">
-        <h3 className="text-sm font-bold text-neutral-100 truncate" title={nodeData.title}>
+        <h3 className="text-sm font-bold font-heading text-[#0F172A] truncate" title={nodeData.title}>
           {nodeData.title || 'Itinerary Item'}
         </h3>
         <div className="flex items-center justify-between mt-0.5">
-          <p className="text-xs text-neutral-400 truncate max-w-[200px]" title={locationText}>
+          <p className="text-xs text-[#64748B] truncate max-w-[200px]" title={locationText}>
             {locationText}
           </p>
           {nodeData.time && (
-            <span className="text-[10px] font-mono text-neutral-500 flex items-center shrink-0">
+            <span className="text-[11px] font-medium text-[#64748B] flex items-center shrink-0">
               <Clock className="w-3 h-3 mr-1 inline" />
               {nodeData.time}
             </span>
@@ -154,53 +155,53 @@ export const DarkItineraryNode = memo(({ id, data }: NodeProps) => {
         </div>
       </div>
 
-      {/* PRICING SECTION & HORIZONTAL CYAN HANDLES */}
-      <div className="relative mb-3 rounded-lg border border-neutral-800 bg-[#1a1a1a] p-3">
-        {/* Cyan Target Handle (Left) */}
+      {/* PRICING SECTION & HORIZONTAL HANDLES */}
+      <div className="relative mb-3.5 rounded-xl border border-slate-200/80 bg-[#FAF9F6] p-3.5">
+        {/* Navy Target Handle (Left) */}
         <Handle
           type="target"
           position={Position.Left}
-          className="!-left-[21px] !h-4 !w-4 !border-2 !border-[#121212] !bg-cyan-500 hover:!scale-110 transition-transform"
+          className="!-left-[21px] !h-4 !w-4 !border-2 !border-white !bg-[#0F172A] hover:!scale-110 transition-transform shadow-xs"
         />
 
         <div className="grid grid-cols-2 gap-3 mb-2.5">
           <div>
-            <label className="mb-1 block text-[10px] uppercase font-semibold text-neutral-400">
+            <label className="mb-1 block text-[10px] uppercase font-semibold text-[#64748B]">
               Base Cost ({currency})
             </label>
             <input 
               type="number" 
               value={baseCost}
               onChange={handleBaseCostChange}
-              className="w-full rounded bg-[#2a2a2a] border border-neutral-700/60 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+              className="w-full rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-xs text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-[#0F172A] font-medium shadow-2xs"
             />
           </div>
           <div>
-            <div className="mb-1 flex justify-between text-[10px] uppercase font-semibold text-neutral-400">
+            <div className="mb-1 flex justify-between text-[10px] uppercase font-semibold text-[#64748B]">
               <label>Margin (%)</label>
-              <span className="text-cyan-400 font-mono">+{currency}{marginAmount.toLocaleString()}</span>
+              <span className="text-[#0F172A] font-bold">+{currency}{marginAmount.toLocaleString()}</span>
             </div>
             <input 
               type="number" 
               value={margin}
               onChange={handleMarginChange}
-              className="w-full rounded bg-[#2a2a2a] border border-neutral-700/60 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+              className="w-full rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-xs text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-[#0F172A] font-medium shadow-2xs"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-neutral-800/80 pt-2.5">
-          <span className="text-xs text-neutral-400 font-medium">Quotation Price:</span>
-          <span className="text-sm font-bold text-white font-mono tracking-tight">
-            {currency}{computedQuotationPrice.toLocaleString()}
+        <div className="flex items-center justify-between border-t border-slate-200 pt-2.5">
+          <span className="text-xs text-[#64748B] font-medium">Quotation Price:</span>
+          <span className="text-sm font-bold text-[#0F172A] font-heading tracking-tight font-mono-numeric">
+            <AnimatedPriceCounter value={computedQuotationPrice} prefix={currency} />
           </span>
         </div>
 
-        {/* Cyan Source Handle (Right) */}
+        {/* Navy Source Handle (Right) */}
         <Handle
           type="source"
           position={Position.Right}
-          className="!-right-[21px] !h-4 !w-4 !border-2 !border-[#121212] !bg-cyan-500 hover:!scale-110 transition-transform"
+          className="!-right-[21px] !h-4 !w-4 !border-2 !border-white !bg-[#0F172A] hover:!scale-110 transition-transform shadow-xs"
         />
       </div>
 
@@ -208,50 +209,50 @@ export const DarkItineraryNode = memo(({ id, data }: NodeProps) => {
       <div>
         <button 
           onClick={() => setIsSpecsOpen(!isSpecsOpen)}
-          className="flex w-full items-center justify-between text-xs text-neutral-400 hover:text-neutral-200 transition-colors py-1"
+          className="flex w-full items-center justify-between text-xs text-[#64748B] hover:text-[#0F172A] transition-colors py-1"
         >
-          <span className="font-medium text-[11px]">View Specs & Inclusions</span>
+          <span className="font-semibold text-[11px]">View Specs & Inclusions</span>
           {isSpecsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         </button>
 
         {isSpecsOpen && (
-          <div className="mt-2.5 pt-2.5 border-t border-neutral-800 text-[11px] text-neutral-400 space-y-1.5 animate-in fade-in duration-150">
+          <div className="mt-2.5 pt-2.5 border-t border-slate-100 text-[11px] text-[#64748B] space-y-1.5 animate-in fade-in duration-150">
             {nodeData.specs?.star_rating && (
-              <div className="flex items-center gap-1 text-amber-400">
-                <Star className="w-3 h-3 fill-amber-400" />
-                <span className="text-neutral-300 font-semibold">{nodeData.specs.star_rating}-Star Accommodation</span>
+              <div className="flex items-center gap-1 text-amber-500 font-semibold">
+                <Star className="w-3.5 h-3.5 fill-amber-500" />
+                <span className="text-[#0F172A]">{nodeData.specs.star_rating}-Star Accommodation</span>
               </div>
             )}
             {nodeData.specs?.duration && (
               <div className="flex items-center gap-1.5">
-                <Clock className="w-3 h-3 text-neutral-500" />
-                <span>Duration: {nodeData.specs.duration}</span>
+                <Clock className="w-3.5 h-3.5 text-[#64748B]" />
+                <span className="text-[#0F172A]">Duration: {nodeData.specs.duration}</span>
               </div>
             )}
             {nodeData.specs?.duration_minutes && !nodeData.specs?.duration && (
               <div className="flex items-center gap-1.5">
-                <Clock className="w-3 h-3 text-neutral-500" />
-                <span>Duration: {nodeData.specs.duration_minutes} mins</span>
+                <Clock className="w-3.5 h-3.5 text-[#64748B]" />
+                <span className="text-[#0F172A]">Duration: {nodeData.specs.duration_minutes} mins</span>
               </div>
             )}
             {nodeData.specs?.vehicle_type && (
               <div className="flex items-center gap-1.5">
-                <Car className="w-3 h-3 text-neutral-500" />
-                <span>Vehicle: {nodeData.specs.vehicle_type}</span>
+                <Car className="w-3.5 h-3.5 text-[#64748B]" />
+                <span className="text-[#0F172A]">Vehicle: {nodeData.specs.vehicle_type}</span>
               </div>
             )}
             {nodeData.specs?.address && (
-              <p className="text-[10px] text-neutral-400 truncate">
+              <p className="text-[10px] text-[#64748B] truncate">
                 Address: {nodeData.specs.address}
               </p>
             )}
             {Array.isArray(nodeData.specs?.inclusions) && nodeData.specs!.inclusions.length > 0 && (
               <div className="pt-1">
-                <span className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">Inclusions:</span>
+                <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Inclusions:</span>
                 <div className="flex flex-wrap gap-1">
                   {nodeData.specs!.inclusions.map((inc, i) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700/50 flex items-center gap-1">
-                      <Check className="w-2.5 h-2.5 text-cyan-400" />
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-[#FAF9F6] text-[#0F172A] border border-slate-200 flex items-center gap-1">
+                      <Check className="w-2.5 h-2.5 text-[#0F172A]" />
                       {inc}
                     </span>
                   ))}
@@ -259,7 +260,7 @@ export const DarkItineraryNode = memo(({ id, data }: NodeProps) => {
               </div>
             )}
             {nodeData.specs?.notes && (
-              <p className="text-[10px] text-neutral-400 italic pt-1">
+              <p className="text-[10px] text-[#64748B] italic pt-1">
                 {nodeData.specs.notes}
               </p>
             )}

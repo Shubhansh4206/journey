@@ -8,15 +8,15 @@ import {
   Phone, 
   Plus, 
   Check, 
-  X,
-  Edit2,
-  Trash2,
-  RefreshCw,
-  MapPin,
-  Search,
-  CheckCircle2,
-  AlertCircle,
-  DollarSign
+  X, 
+  Edit2, 
+  Trash2, 
+  RefreshCw, 
+  MapPin, 
+  Search, 
+  CheckCircle2, 
+  AlertCircle, 
+  DollarSign 
 } from 'lucide-react';
 
 interface TourGuidesViewProps {
@@ -101,104 +101,101 @@ export const TourGuidesView: React.FC<TourGuidesViewProps> = ({ operator }) => {
       operator_id: operator?.id,
       name: guideName.trim(),
       city: guideCity,
-      contact_number: guidePhone.trim() || null,
+      contact_number: guidePhone.trim(),
       daily_rate: Number(guideRate) || 150,
       languages: guideLanguages.split(',').map(s => s.trim()).filter(Boolean),
-      is_active: true
+      is_active: true,
     };
 
-    if (editingId) {
-      const res = await dbService.updateTourGuide({ id: editingId, ...guidePayload } as TourGuide);
-      if (res.error) {
-        setNotification({ type: 'error', message: `Supabase Update Warning: ${res.error}` });
-      } else {
+    try {
+      if (editingId) {
+        const res = await dbService.updateTourGuide({ id: editingId, ...guidePayload } as TourGuide);
+        if (res.error) throw new Error(res.error);
         setNotification({ type: 'success', message: 'Tour guide updated in Supabase.' });
-      }
-    } else {
-      const res = await dbService.createTourGuide(guidePayload);
-      if (res.error) {
-        setNotification({ type: 'error', message: `Supabase Insert Warning: ${res.error}` });
       } else {
-        setNotification({ type: 'success', message: 'Tour guide saved to Supabase.' });
+        const res = await dbService.createTourGuide(guidePayload);
+        if (res.error) throw new Error(res.error);
+        setNotification({ type: 'success', message: 'Tour guide created in Supabase.' });
       }
+      await loadGuides();
+      resetForm();
+    } catch (err: any) {
+      setNotification({ type: 'error', message: err.message || 'Operation failed' });
+    } finally {
+      setIsSaving(false);
     }
-
-    await loadGuides();
-    resetForm();
   };
 
   const handleDeleteGuide = async (id: string, name: string) => {
-    if (confirm(`Delete guide "${name}" from Supabase?`)) {
-      const res = await dbService.deleteTourGuide(id);
-      if (res.error) {
-        setNotification({ type: 'error', message: `Delete error: ${res.error}` });
-      } else {
-        setNotification({ type: 'success', message: 'Tour guide removed from Supabase.' });
+    if (confirm(`Remove guide "${name}" from Supabase?`)) {
+      try {
+        const res = await dbService.deleteTourGuide(id);
+        if (res.error) throw new Error(res.error);
+        setNotification({ type: 'success', message: 'Tour guide removed from database.' });
+        setGuides(prev => prev.filter(g => g.id !== id));
+      } catch (err: any) {
+        setNotification({ type: 'error', message: err.message || 'Delete failed' });
       }
-      setGuides(prev => prev.filter(g => g.id !== id));
     }
   };
 
   const filteredGuides = guides.filter(g => {
     const displayName = g.name || `${g.first_name || ''} ${g.last_name || ''}`.trim();
-    const matchesSearch = 
-      displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.languages?.some(l => l.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    if (selectedCity === 'all') return matchesSearch;
-    return matchesSearch && g.city?.toLowerCase() === selectedCity.toLowerCase();
+    const matchesSearch = displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          g.languages?.some(l => l.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSearch;
   });
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       {/* Toast Notification */}
       {notification && (
-        <div className={`mb-6 p-3 rounded-lg border text-xs flex items-center justify-between transition-all ${
+        <div className={`mb-6 p-3.5 rounded-2xl border text-xs flex items-center justify-between transition-all ${
           notification.type === 'success' 
-            ? 'bg-zinc-900 border-emerald-500/40 text-emerald-300' 
-            : 'bg-zinc-900 border-red-500/40 text-red-300'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+            : 'bg-red-50 border-red-200 text-red-800'
         }`}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {notification.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
             )}
-            <span>{notification.message}</span>
+            <span className="font-medium">{notification.message}</span>
           </div>
-          <button onClick={() => setNotification(null)} className="text-zinc-500 hover:text-zinc-300">
+          <button onClick={() => setNotification(null)} className="text-[#9AA0A6] hover:text-[#1A1A1A]">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-800 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 mb-8">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-[#1A1A1A] flex items-center gap-3">
             <span>Tour Guides</span>
-            <span className="text-[11px] font-mono text-zinc-300 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
-              Supabase CRUD
+            <span className="text-xs font-semibold text-[#0A2647] bg-[#F5F6F8] px-3 py-1 rounded-full border border-slate-200">
+              {guides.length} Certified Guides
             </span>
           </h1>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-[#9AA0A6] mt-1.5">
             Manage your certified local guides across Mumbai, Udaipur, Jaipur, and Goa.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadGuides}
             disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs text-zinc-300 font-medium transition-colors"
+            className="btn-interactive flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-xs text-[#0F172A] font-semibold shadow-xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-[#64748B] ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
 
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg text-xs transition-colors shadow-sm"
+            className="btn-interactive flex items-center gap-1.5 px-5 py-2 bg-[#0A2647] hover:bg-[#081f3a] text-white rounded-full text-xs font-semibold shadow-md shadow-[#0A2647]/15"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Guide</span>
@@ -207,15 +204,15 @@ export const TourGuidesView: React.FC<TourGuidesViewProps> = ({ operator }) => {
       </div>
 
       {/* City Filters & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-zinc-800/80 mb-6">
-        {/* 4 City Options Only */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-8">
+        {/* City Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1">
           <button
             onClick={() => setSelectedCity('all')}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
               selectedCity === 'all'
-                ? 'bg-zinc-800 text-white'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-[#0A2647] text-white shadow-sm'
+                : 'bg-white text-[#9AA0A6] hover:text-[#1A1A1A] border border-slate-200'
             }`}
           >
             All Cities
@@ -224,124 +221,120 @@ export const TourGuidesView: React.FC<TourGuidesViewProps> = ({ operator }) => {
             <button
               key={c}
               onClick={() => setSelectedCity(c)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center gap-1 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1 ${
                 selectedCity === c
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#0A2647] text-white shadow-sm'
+                  : 'bg-white text-[#9AA0A6] hover:text-[#1A1A1A] border border-slate-200'
               }`}
             >
-              <MapPin className="w-3 h-3 text-zinc-500" />
+              <MapPin className="w-3 h-3 text-[#9AA0A6]" />
               <span>{c}</span>
             </button>
           ))}
         </div>
 
         {/* Search */}
-        <div className="relative w-full sm:w-60">
-          <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+        <div className="relative w-full sm:w-64">
+          <Search className="w-3.5 h-3.5 text-[#9AA0A6] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search guide name or language..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+            className="w-full pl-9 pr-3.5 py-2 bg-[#F5F6F8] border border-slate-200 rounded-full text-xs text-[#1A1A1A] placeholder-[#9AA0A6] focus:outline-none focus:border-[#0A2647] font-medium"
           />
         </div>
       </div>
 
-      {/* Guide Create/Edit Modal (Clean & Essential Fields Only) */}
+      {/* Guide Create/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-2xl overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white border border-slate-100 rounded-3xl p-6 shadow-2xl animate-in fade-in duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-base font-bold text-[#1A1A1A]">
                 {editingId ? 'Edit Guide' : 'Add New Guide'}
               </h3>
-              <button onClick={resetForm} className="text-zinc-500 hover:text-white">
+              <button onClick={resetForm} className="text-[#9AA0A6] hover:text-[#1A1A1A]">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveGuide} className="space-y-3 text-xs">
+            <form onSubmit={handleSaveGuide} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-zinc-300 mb-1">Guide Full Name *</label>
+                <label className="block text-[#1A1A1A] font-semibold mb-1">Full Name *</label>
                 <input
                   type="text"
                   value={guideName}
                   onChange={(e) => setGuideName(e.target.value)}
-                  placeholder="e.g. Rahul Sharma"
+                  placeholder="e.g. Ramesh Kulkarni"
                   required
-                  className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
+                  className="w-full px-3.5 py-2.5 bg-[#F5F6F8] border border-slate-200 rounded-xl text-[#1A1A1A] placeholder-[#9AA0A6] focus:outline-none focus:border-[#0A2647] font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-zinc-300 mb-1">City *</label>
+                  <label className="block text-[#1A1A1A] font-semibold mb-1">City *</label>
                   <select
                     value={guideCity}
                     onChange={(e) => setGuideCity(e.target.value as SupportedCity)}
-                    className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
+                    className="w-full px-3.5 py-2.5 bg-[#F5F6F8] border border-slate-200 rounded-xl text-[#1A1A1A] focus:outline-none focus:border-[#0A2647] font-medium"
                   >
-                    {SUPPORTED_CITIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+                    {SUPPORTED_CITIES.map(c => (
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-zinc-300 mb-1">Daily Rate ($/day) *</label>
+                  <label className="block text-[#1A1A1A] font-semibold mb-1">Daily Rate (₹)</label>
                   <input
                     type="number"
-                    min="0"
-                    step="5"
                     value={guideRate}
                     onChange={(e) => setGuideRate(parseFloat(e.target.value) || 0)}
                     required
-                    className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
+                    className="w-full px-3.5 py-2.5 bg-[#F5F6F8] border border-slate-200 rounded-xl text-[#1A1A1A] focus:outline-none focus:border-[#0A2647] font-medium font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-zinc-300 mb-1">Contact Phone</label>
+                <label className="block text-[#1A1A1A] font-semibold mb-1">Contact Phone</label>
                 <input
                   type="text"
                   value={guidePhone}
                   onChange={(e) => setGuidePhone(e.target.value)}
-                  placeholder="+91 98765-43210"
-                  className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
+                  placeholder="+91 98200 12345"
+                  className="w-full px-3.5 py-2.5 bg-[#F5F6F8] border border-slate-200 rounded-xl text-[#1A1A1A] placeholder-[#9AA0A6] focus:outline-none focus:border-[#0A2647] font-medium"
                 />
               </div>
 
               <div>
-                <label className="block text-zinc-300 mb-1">Languages (comma-separated)</label>
+                <label className="block text-[#1A1A1A] font-semibold mb-1">Languages (comma-separated)</label>
                 <input
                   type="text"
                   value={guideLanguages}
                   onChange={(e) => setGuideLanguages(e.target.value)}
-                  placeholder="English, Hindi, French, Spanish"
-                  className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-white focus:outline-none focus:border-zinc-500"
+                  placeholder="English, Hindi, Marathi, French"
+                  className="w-full px-3.5 py-2.5 bg-[#F5F6F8] border border-slate-200 rounded-xl text-[#1A1A1A] placeholder-[#9AA0A6] focus:outline-none focus:border-[#0A2647] font-medium"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={resetForm}
-                  disabled={isSaving}
-                  className="px-3 py-1.5 text-zinc-400 hover:text-white"
+                  className="px-4 py-2 text-[#9AA0A6] hover:text-[#1A1A1A] font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded disabled:opacity-50"
+                  className="px-5 py-2 bg-[#0A2647] hover:bg-[#081f3a] text-white font-semibold rounded-full shadow-md shadow-[#0A2647]/15 transition-all flex items-center gap-1.5"
                 >
                   {isSaving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{editingId ? 'Update in Supabase' : 'Save Guide'}</span>
+                  <span>{editingId ? 'Update Guide' : 'Save Guide'}</span>
                 </button>
               </div>
             </form>
@@ -351,66 +344,76 @@ export const TourGuidesView: React.FC<TourGuidesViewProps> = ({ operator }) => {
 
       {/* Guide Cards Grid */}
       {filteredGuides.length === 0 ? (
-        <div className="py-12 text-center text-xs text-zinc-500 border border-zinc-800/80 rounded-xl bg-zinc-900/20">
-          No tour guides registered {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click "+ Add Guide" to insert into Supabase.
+        <div className="py-20 text-center rounded-3xl bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-8">
+          <UserCheck className="w-10 h-10 text-[#9AA0A6] mx-auto mb-3" />
+          <h3 className="text-base font-bold text-[#1A1A1A]">No tour guides registered</h3>
+          <p className="text-xs text-[#9AA0A6] max-w-sm mx-auto mt-1 mb-5">
+            No guides found {selectedCity !== 'all' ? `in ${selectedCity}` : ''}. Click &quot;Add Guide&quot; to insert into Supabase.
+          </p>
+          <button
+            onClick={handleOpenAdd}
+            className="px-5 py-2 bg-[#0A2647] text-white rounded-full text-xs font-semibold shadow-sm hover:bg-[#081f3a] transition-colors"
+          >
+            + Add New Guide
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredGuides.map((guide) => {
             const displayName = guide.name || `${guide.first_name || ''} ${guide.last_name || ''}`.trim();
             return (
               <div
                 key={guide.id}
-                className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex flex-col justify-between hover:border-zinc-700 transition-colors"
+                className="p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-100 shadow-[0_4px_25px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_35px_rgba(10,38,71,0.07)] flex flex-col justify-between transition-all"
               >
                 <div>
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start justify-between mb-2.5">
                     <div>
-                      <h3 className="font-semibold text-xs text-white">
+                      <h3 className="font-bold text-sm text-[#1A1A1A]">
                         {displayName}
                       </h3>
-                      <span className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-zinc-500" />
+                      <span className="text-xs text-[#9AA0A6] flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-[#9AA0A6]" />
                         <span>{guide.city || 'Mumbai'}</span>
                       </span>
                     </div>
-                    <span className="font-mono text-xs font-semibold text-zinc-200 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
-                      ${guide.daily_rate}/day
+                    <span className="font-mono text-xs font-bold text-[#0A2647] bg-[#F5F6F8] px-2.5 py-1 rounded-full border border-slate-200">
+                      ₹{guide.daily_rate}/day
                     </span>
                   </div>
 
                   {guide.contact_number && (
-                    <p className="text-[11px] text-zinc-400 flex items-center gap-1.5 mb-2">
-                      <Phone className="w-3 h-3 text-zinc-500" />
+                    <p className="text-xs text-[#9AA0A6] flex items-center gap-1.5 mb-2.5">
+                      <Phone className="w-3 h-3 text-[#9AA0A6]" />
                       <span>{guide.contact_number}</span>
                     </p>
                   )}
 
                   {/* Languages */}
-                  <div className="flex flex-wrap gap-1 mb-2">
+                  <div className="flex flex-wrap gap-1 mb-3">
                     {guide.languages?.map((lang, i) => (
-                      <span key={i} className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-950 text-zinc-300 border border-zinc-800">
+                      <span key={i} className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#F5F6F8] text-[#1A1A1A] border border-slate-200">
                         {lang}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px]">
-                  <span className="text-zinc-400 text-[10px]">Certified Guide</span>
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-[#9AA0A6] text-[11px] font-medium">Verified Partner</span>
 
                   {/* Action buttons (Edit / Delete) */}
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEditGuide(guide)}
-                      className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                      className="p-1.5 rounded-full hover:bg-[#F5F6F8] text-[#9AA0A6] hover:text-[#0A2647] transition-colors"
                       title="Edit in Supabase"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteGuide(guide.id, displayName)}
-                      className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-red-400 transition-colors"
+                      className="p-1.5 rounded-full hover:bg-red-50 text-[#9AA0A6] hover:text-red-500 transition-colors"
                       title="Delete from Supabase"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

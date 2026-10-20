@@ -12,34 +12,39 @@ import { TiedUpInventoryView } from '../components/TiedUpInventoryView';
 import { supabase } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 
+const DEFAULT_OPERATOR: TourOperator = {
+  id: 'dc3d36fb-0502-432a-920d-c3daa95c981a',
+  company_name: 'FLAMINGO',
+  contact_email: 'flamingo1010@gmail.com'
+};
+
 export default function App() {
-  const [operator, setOperator] = useState<TourOperator | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [operator, setOperator] = useState<TourOperator | null>(DEFAULT_OPERATOR);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeView, setActiveView] = useState<'dashboard' | 'builder' | 'inventory' | 'guides'>('dashboard');
   const [requests, setRequests] = useState<TripRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<TripRequest | null>(null);
 
   useEffect(() => {
-    initApp();
+    refreshRequests();
+    dbService.getActiveOperator().then((op) => {
+      if (op) setOperator(op);
+    }).catch(console.warn);
   }, []);
-
-  const initApp = async () => {
-    setLoading(true);
-    const op = await dbService.getActiveOperator();
-    setOperator(op);
-
-    if (op) {
-      await refreshRequests();
-    }
-    setLoading(false);
-  };
 
   const refreshRequests = async () => {
     setRefreshing(true);
-    const list = await dbService.getTripRequests();
-    setRequests(list);
-    setRefreshing(false);
+    try {
+      const list = await dbService.getTripRequests();
+      if (Array.isArray(list) && list.length > 0) {
+        setRequests(list);
+      }
+    } catch (err) {
+      console.error('Failed to load trip requests:', err);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleLoginSuccess = async (op: TourOperator) => {
@@ -81,9 +86,9 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center text-zinc-400 gap-2">
-        <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
-        <p className="text-xs font-mono text-zinc-500">Loading Journey Operator...</p>
+      <div className="min-h-screen bg-[#F5F6F8] flex flex-col items-center justify-center text-[#9AA0A6] gap-2">
+        <Loader2 className="w-5 h-5 text-[#0A2647] animate-spin" />
+        <p className="text-xs font-medium text-[#9AA0A6]">Loading Journey Operator...</p>
       </div>
     );
   }
@@ -94,7 +99,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#09090b] text-zinc-100">
+    <div className="min-h-screen flex flex-col bg-[#F5F6F8] text-[#1A1A1A]">
       {/* Minimal Header */}
       <Header
         operator={operator}
@@ -109,6 +114,7 @@ export default function App() {
         {activeView === 'dashboard' && (
           <DashboardView
             requests={requests}
+            operator={operator}
             onSelectRequest={handleSelectRequest}
             onRefresh={refreshRequests}
             onCreateRealRequest={handleCreateRealRequest}
